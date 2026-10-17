@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as CaseSimulatorRouteImport } from './routes/case-simulator'
+import { Route as CurriculumRouteImport } from './routes/curriculum'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as NotesRouteImport } from './routes/notes'
+import { Route as QuizzesRouteImport } from './routes/quizzes'
+import { Route as ResourcesRouteImport } from './routes/resources'
+import { Route as SpecialTestsRouteImport } from './routes/special-tests'
+import { Route as SubjectsRouteImport } from './routes/subjects'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CaseSimulatorRoute = CaseSimulatorRouteImport.update({
+  id: '/case-simulator',
+  path: '/case-simulator',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CurriculumRoute = CurriculumRouteImport.update({
+  id: '/curriculum',
+  path: '/curriculum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotesRoute = NotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuizzesRoute = QuizzesRouteImport.update({
+  id: '/quizzes',
+  path: '/quizzes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResourcesRoute = ResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpecialTestsRoute = SpecialTestsRouteImport.update({
+  id: '/special-tests',
+  path: '/special-tests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SubjectsRoute = SubjectsRouteImport.update({
+  id: '/subjects',
+  path: '/subjects',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/case-simulator': typeof CaseSimulatorRoute
+  '/curriculum': typeof CurriculumRoute
+  '/dashboard': typeof DashboardRoute
+  '/notes': typeof NotesRoute
+  '/quizzes': typeof QuizzesRoute
+  '/resources': typeof ResourcesRoute
+  '/special-tests': typeof SpecialTestsRoute
+  '/subjects': typeof SubjectsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/case-simulator': typeof CaseSimulatorRoute
+  '/curriculum': typeof CurriculumRoute
+  '/dashboard': typeof DashboardRoute
+  '/notes': typeof NotesRoute
+  '/quizzes': typeof QuizzesRoute
+  '/resources': typeof ResourcesRoute
+  '/special-tests': typeof SpecialTestsRoute
+  '/subjects': typeof SubjectsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/case-simulator': typeof CaseSimulatorRoute
+  '/curriculum': typeof CurriculumRoute
+  '/dashboard': typeof DashboardRoute
+  '/notes': typeof NotesRoute
+  '/quizzes': typeof QuizzesRoute
+  '/resources': typeof ResourcesRoute
+  '/special-tests': typeof SpecialTestsRoute
+  '/subjects': typeof SubjectsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/case-simulator'
+    | '/curriculum'
+    | '/dashboard'
+    | '/notes'
+    | '/quizzes'
+    | '/resources'
+    | '/special-tests'
+    | '/subjects'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/about'
+    | '/case-simulator'
+    | '/curriculum'
+    | '/dashboard'
+    | '/notes'
+    | '/quizzes'
+    | '/resources'
+    | '/special-tests'
+    | '/subjects'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/case-simulator'
+    | '/curriculum'
+    | '/dashboard'
+    | '/notes'
+    | '/quizzes'
+    | '/resources'
+    | '/special-tests'
+    | '/subjects'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  CaseSimulatorRoute: typeof CaseSimulatorRoute
+  CurriculumRoute: typeof CurriculumRoute
+  DashboardRoute: typeof DashboardRoute
+  NotesRoute: typeof NotesRoute
+  QuizzesRoute: typeof QuizzesRoute
+  ResourcesRoute: typeof ResourcesRoute
+  SpecialTestsRoute: typeof SpecialTestsRoute
+  SubjectsRoute: typeof SubjectsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +169,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/case-simulator': {
+      id: '/case-simulator'
+      path: '/case-simulator'
+      fullPath: '/case-simulator'
+      preLoaderRoute: typeof CaseSimulatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/curriculum': {
+      id: '/curriculum'
+      path: '/curriculum'
+      fullPath: '/curriculum'
+      preLoaderRoute: typeof CurriculumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notes': {
+      id: '/notes'
+      path: '/notes'
+      fullPath: '/notes'
+      preLoaderRoute: typeof NotesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quizzes': {
+      id: '/quizzes'
+      path: '/quizzes'
+      fullPath: '/quizzes'
+      preLoaderRoute: typeof QuizzesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/resources': {
+      id: '/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof ResourcesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/special-tests': {
+      id: '/special-tests'
+      path: '/special-tests'
+      fullPath: '/special-tests'
+      preLoaderRoute: typeof SpecialTestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/subjects': {
+      id: '/subjects'
+      path: '/subjects'
+      fullPath: '/subjects'
+      preLoaderRoute: typeof SubjectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  CaseSimulatorRoute: CaseSimulatorRoute,
+  CurriculumRoute: CurriculumRoute,
+  DashboardRoute: DashboardRoute,
+  NotesRoute: NotesRoute,
+  QuizzesRoute: QuizzesRoute,
+  ResourcesRoute: ResourcesRoute,
+  SpecialTestsRoute: SpecialTestsRoute,
+  SubjectsRoute: SubjectsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
