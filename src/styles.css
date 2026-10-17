@@ -64,7 +64,7 @@
 }
 
 @utility bg-hero { background: var(--gradient-hero); }
-@utility bg-brand { background: var(--gradient-brand); }
+@utility bg-brand { background-image: var(--gradient-brand); }
 @utility shadow-soft { box-shadow: var(--shadow-soft); }
 
 @layer base {
