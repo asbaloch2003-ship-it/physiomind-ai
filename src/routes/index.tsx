@@ -20,10 +20,10 @@ function Index() {
   return (
     <>
       <section className="bg-hero">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
-          <div>
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-4 py-14 lg:grid-cols-2 lg:gap-12 lg:py-24">
+          <div className="min-w-0">
             <span className="rounded-full bg-success-soft px-3 py-1 text-xs font-semibold text-success">Built for DPT students in Pakistan</span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-tight md:text-6xl">
+            <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-5xl xl:text-6xl">
               Don't just learn physiotherapy. <span className="bg-brand bg-clip-text text-transparent">Learn to think like a physiotherapist.</span>
             </h1>
             <p className="mt-5 max-w-lg text-lg text-muted-foreground">PhysioMind AI brings your curriculum, notes, BCQs, viva prep, special tests and guided clinical reasoning into one structured learning space.</p>
