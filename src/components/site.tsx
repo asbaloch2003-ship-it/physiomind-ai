@@ -18,9 +18,12 @@ import logoMark from "@/assets/logo-mark.png.asset.json";
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-bold">
+    <Link to="/" className="flex items-center gap-2.5">
       <img src={logoMark.url} alt="PhysioMind AI logo" className="h-10 w-10" />
-      <span>PhysioMind <span className="text-accent">AI</span></span>
+      <span className="font-display leading-tight">
+        <span className="block text-lg font-bold">PhysioMind <span className="text-accent">AI</span></span>
+        <span className="hidden text-[11px] font-medium tracking-wide text-muted-foreground sm:block">Learn to think like a physiotherapist.</span>
+      </span>
     </Link>
   );
 }
