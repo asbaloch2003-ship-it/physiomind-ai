@@ -48,7 +48,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "PhysioMind AI" },
-      { name: "description", content: "AI-powered learning and clinical reasoning for DPT students in Pakistan." },
+      { name: "description", content: "Learn to think like a physiotherapist. AI-powered learning and clinical reasoning for DPT students in Pakistan." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
