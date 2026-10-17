@@ -1,36 +1,48 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Bone, HeartPulse, Brain, Activity, Zap, Baby } from "lucide-react";
-import { Card, Container, PageHeader, meta } from "@/components/site";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { BookOpen, FileText, ListChecks } from "lucide-react";
+import { Card, Container, PageHeader, Tag, meta } from "@/components/site";
+import { Button } from "@/components/ui/button";
+import { SourceReference, SemesterFilter, SubjectSearch } from "@/components/curriculum-controls";
+import { filterCourses, creditLabel } from "@/lib/curriculum";
+import { courseOutlines } from "@/lib/course-outlines";
 
 export const Route = createFileRoute("/subjects")({
   head: () => meta("Subjects", "Explore core DPT subjects with lectures, notes and practice questions."),
+  validateSearch: (search: Record<string, unknown>): { semester?: string; course?: string } => ({
+    semester: typeof search.semester === "string" ? search.semester : undefined,
+    course: typeof search.course === "string" ? search.course : undefined,
+  }),
   component: Page,
 });
 
-const subjects = [
-  { icon: Bone, n: "Musculoskeletal PT", d: "Assessment and management of joint, muscle and soft-tissue conditions.", l: 24 },
-  { icon: Brain, n: "Neurological PT", d: "Stroke, spinal cord injury, Parkinson's and neuro rehabilitation principles.", l: 20 },
-  { icon: HeartPulse, n: "Cardiopulmonary PT", d: "Chest physiotherapy, cardiac rehab and respiratory assessment.", l: 16 },
-  { icon: Activity, n: "Kinesiology & Biomechanics", d: "Human movement analysis, gait and posture.", l: 18 },
-  { icon: Zap, n: "Electrotherapy", d: "TENS, ultrasound, IFT and physical agents with safety considerations.", l: 14 },
-  { icon: Baby, n: "Pediatric PT", d: "Developmental milestones, cerebral palsy and pediatric assessment.", l: 12 },
-];
-
 function Page() {
+  const search = Route.useSearch();
+  const [semester, setSemester] = useState(search.semester ?? "all");
+  const [query, setQuery] = useState("");
+  const list = filterCourses(semester, query).filter((c) => !search.course || query !== "" || semester !== search.semester || c.id === search.course);
   return (
     <>
-      <PageHeader eyebrow="Learn by subject" title="Subjects" desc="Structured modules for each core area of physiotherapy practice." />
+      <PageHeader eyebrow="Semester-wise learning" title="Subjects" desc="Every course in the uploaded HEC DPT study scheme, with official outlines and linked revision material." />
       <Container>
+        <SourceReference />
+        <div className="mb-6 flex flex-wrap items-end gap-4"><SemesterFilter value={semester} onChange={setSemester} /><SubjectSearch value={query} onChange={setQuery} /></div>
+        <p className="mb-5 text-sm text-muted-foreground">{list.length} subjects</p>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {subjects.map((s) => (
-            <Card key={s.n}>
-              <s.icon className="h-8 w-8 text-primary" />
-              <h2 className="mt-4 text-lg font-semibold">{s.n}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{s.d}</p>
-              <p className="mt-4 text-xs font-medium text-accent">{s.l} lessons planned</p>
+          {list.map((c) => (
+            <Card key={c.id} className="flex flex-col !rounded-lg">
+              <div className="flex items-center justify-between"><BookOpen className="size-6 text-primary" /><Tag>Semester {c.semester}</Tag></div>
+              <h2 className="mt-4 text-lg font-semibold">{c.name}</h2>
+              <p className="mt-2 text-xs text-accent">{creditLabel(c)} credits{c.optional ? " · University optional" : ""}</p>
+              <ul className="my-4 list-inside list-disc space-y-1 text-sm text-muted-foreground">{courseOutlines[c.id]?.topics.map((t) => <li key={t}>{t}</li>)}</ul>
+              <div className="mt-auto flex flex-wrap gap-2 pt-3">
+                <Button variant="secondary" size="sm" asChild><Link to="/notes" search={{ semester: String(c.semester), course: c.id }}><FileText />Notes & viva</Link></Button>
+                <Button variant="outline" size="sm" asChild><Link to="/quizzes" search={{ semester: String(c.semester), course: c.id }}><ListChecks />BCQs</Link></Button>
+              </div>
             </Card>
           ))}
         </div>
+        {list.length === 0 && <p className="py-10 text-center text-muted-foreground">No subjects match your search.</p>}
       </Container>
     </>
   );
