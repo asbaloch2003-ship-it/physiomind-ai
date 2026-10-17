@@ -18,7 +18,7 @@ const steps = [
 function Page() {
   const [i, setI] = useState(0);
   const [shown, setShown] = useState(false);
-  const s = steps[i];
+  const s = steps[i]!;
   return (
     <>
       <PageHeader eyebrow="Clinical reasoning" title="AI Clinical Case Simulator" desc="Work through a simulated case one step at a time. Think first, then reveal the guided reasoning." />

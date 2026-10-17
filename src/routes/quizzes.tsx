@@ -16,7 +16,7 @@ const qs = [
 
 function Page() {
   const [ans, setAns] = useState<Record<number, number>>({});
-  const score = Object.entries(ans).filter(([k, v]) => qs[+k].a === v).length;
+  const score = Object.entries(ans).filter(([k, v]) => qs[+k]?.a === v).length;
   return (
     <>
       <PageHeader eyebrow="Exam practice" title="BCQs & Quizzes" desc="Select an answer to see instant feedback and a short explanation." />
