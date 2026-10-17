@@ -14,11 +14,13 @@ const nav = [
   { to: "/about", label: "About" },
 ] as const;
 
+import logoMark from "@/assets/logo-mark.png.asset.json";
+
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
-      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand text-primary-foreground"><Brain className="h-5 w-5" /></span>
-      PhysioMind <span className="text-accent">AI</span>
+    <Link to="/" className="flex items-center gap-2.5 font-display text-lg font-bold">
+      <img src={logoMark.url} alt="PhysioMind AI logo" className="h-10 w-10" />
+      <span>PhysioMind <span className="text-accent">AI</span></span>
     </Link>
   );
 }
