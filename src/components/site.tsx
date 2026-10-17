@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
-import { Brain, Menu, X, ShieldAlert } from "lucide-react";
+import { Menu, X, ShieldAlert } from "lucide-react";
 
 const nav = [
   { to: "/curriculum", label: "Curriculum" },
