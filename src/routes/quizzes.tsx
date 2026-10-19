@@ -1,42 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Card, Container, PageHeader, meta } from "@/components/site";
+import { SourceReference, StudyFilters } from "@/components/curriculum-controls";
+import { getCourse } from "@/lib/curriculum";
+import { filterMaterials, learningSearch } from "@/lib/study-materials";
 
 export const Route = createFileRoute("/quizzes")({
-  head: () => meta("BCQs & Quizzes", "Practice DPT best-choice questions with instant feedback and explanations."),
+  head: () => meta("BCQs & Quizzes", "Best-choice questions aligned to every DPT course, with instant feedback."),
+  validateSearch: learningSearch,
   component: Page,
 });
 
-const qs = [
-  { q: "Which nerve supplies the deltoid muscle?", o: ["Radial", "Axillary", "Musculocutaneous", "Suprascapular"], a: 1, e: "The axillary nerve (C5–C6) supplies the deltoid and teres minor." },
-  { q: "The Lachman test primarily assesses which ligament?", o: ["PCL", "MCL", "ACL", "LCL"], a: 2, e: "Lachman assesses anterior tibial translation, testing ACL integrity." },
-  { q: "Normal knee flexion range of motion is approximately:", o: ["0–90°", "0–110°", "0–135°", "0–180°"], a: 2, e: "Commonly cited normal active knee flexion is about 0–135°." },
-  { q: "Which is a contraindication for therapeutic ultrasound?", o: ["Chronic tendinopathy", "Over a malignancy", "Muscle spasm", "Scar tissue"], a: 1, e: "Ultrasound should not be applied over known or suspected malignancy." },
-];
-
 function Page() {
-  const [ans, setAns] = useState<Record<number, number>>({});
-  const score = Object.entries(ans).filter(([k, v]) => qs[+k]?.a === v).length;
+  const search = Route.useSearch();
+  const [semester, setSemester] = useState(search.semester ?? "all");
+  const [subject, setSubject] = useState(search.course ?? "all");
+  const [ans, setAns] = useState<Record<string, number>>({});
+  const list = filterMaterials(semester, subject);
+  const answered = list.filter((m) => ans[m.courseId] !== undefined).length;
+  const score = list.filter((m) => ans[m.courseId] === m.answer).length;
   return (
     <>
-      <PageHeader eyebrow="Exam practice" title="BCQs & Quizzes" desc="Select an answer to see instant feedback and a short explanation." />
+      <PageHeader eyebrow="Exam practice" title="BCQs & Quizzes" desc="One best-choice question for every course in the uploaded HEC DPT study scheme. Select an answer for instant feedback." />
       <Container>
-        <p className="mb-6 font-semibold">Score: <span className="text-primary">{score}</span> / {qs.length}</p>
+        <SourceReference />
+        <StudyFilters semester={semester} subject={subject} onSemester={setSemester} onSubject={setSubject} />
+        <p className="mb-6 text-sm font-semibold">Score: <span className="text-primary">{score}</span> / {answered} answered · {list.length} questions</p>
         <div className="space-y-5">
-          {qs.map((x, i) => (
-            <Card key={i}>
-              <h2 className="font-semibold">{i + 1}. {x.q}</h2>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {x.o.map((o, j) => {
-                  const picked = ans[i] !== undefined;
-                  const cls = !picked ? "hover:bg-secondary" : j === x.a ? "border-success bg-success-soft" : ans[i] === j ? "border-destructive text-destructive" : "opacity-60";
-                  return <button key={o} disabled={picked} onClick={() => setAns({ ...ans, [i]: j })} className={`rounded-xl border px-4 py-3 text-left text-sm ${cls}`}>{o}</button>;
-                })}
-              </div>
-              {ans[i] !== undefined && <p className="mt-3 text-sm text-muted-foreground">{x.e}</p>}
-            </Card>
-          ))}
+          {list.map((m, i) => {
+            const course = getCourse(m.courseId);
+            const picked = ans[m.courseId] !== undefined;
+            return (
+              <Card key={m.courseId} className="!rounded-lg">
+                <p className="text-xs font-semibold uppercase tracking-wide text-accent">{course?.name} · Semester {course?.semester}</p>
+                <h2 className="mt-2 font-semibold">{i + 1}. {m.question}</h2>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  {m.options.map((o, j) => {
+                    const cls = !picked ? "hover:bg-secondary" : j === m.answer ? "border-success bg-success-soft" : ans[m.courseId] === j ? "border-destructive text-destructive" : "opacity-60";
+                    return <button key={o} disabled={picked} onClick={() => setAns({ ...ans, [m.courseId]: j })} className={`rounded-md border px-4 py-3 text-left text-sm ${cls}`}>{o}</button>;
+                  })}
+                </div>
+                {picked && <p className="mt-3 text-sm text-muted-foreground">{ans[m.courseId] === m.answer ? "Correct." : `Not quite — the expected answer is “${m.options[m.answer]}”.`}</p>}
+              </Card>
+            );
+          })}
         </div>
+        {list.length === 0 && <p className="py-10 text-center text-muted-foreground">No questions match your filters.</p>}
       </Container>
     </>
   );
