@@ -19,9 +19,9 @@ import logoMark from "@/assets/logo-mark.png.asset.json";
 export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2.5">
-      <img src={logoMark.url} alt="PhysioMind AI logo" className="h-10 w-10" />
+      <img src={logoMark.url} alt="PhysioSmart AI logo" className="h-12 w-12" />
       <span className="font-display leading-tight">
-        <span className="block text-lg font-bold">PhysioMind <span className="text-accent">AI</span></span>
+        <span className="block text-xl font-bold">PhysioSmart <span className="text-accent">AI</span></span>
         <span className="hidden text-[11px] font-medium tracking-wide text-muted-foreground sm:block">Learn to think like a physiotherapist.</span>
       </span>
     </Link>
@@ -68,7 +68,7 @@ export function Footer() {
           {nav.map((n) => <Link key={n.to} to={n.to} className="hover:text-primary">{n.label}</Link>)}
         </div>
       </div>
-      <p className="border-t py-4 text-center text-xs text-muted-foreground">© 2026 PhysioMind AI · For educational purposes only</p>
+      <p className="border-t py-4 text-center text-xs text-muted-foreground">© 2026 PhysioSmart AI · For educational purposes only</p>
     </footer>
   );
 }
@@ -99,9 +99,9 @@ export function Tag({ children }: { children: ReactNode }) {
 
 export const meta = (title: string, description: string) => ({
   meta: [
-    { title: `${title} | PhysioMind AI` },
+    { title: `${title} | PhysioSmart AI` },
     { name: "description", content: description },
-    { property: "og:title", content: `${title} | PhysioMind AI` },
+    { property: "og:title", content: `${title} | PhysioSmart AI` },
     { property: "og:description", content: description },
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary_large_image" },
