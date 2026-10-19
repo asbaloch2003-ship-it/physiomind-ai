@@ -26,7 +26,7 @@ function Index() {
             <h1 className="mt-5 text-3xl font-extrabold leading-[1.15] sm:text-4xl lg:text-5xl xl:text-6xl">
               Don't just learn physiotherapy. <span className="bg-brand bg-clip-text text-transparent">Learn to think like a physiotherapist.</span>
             </h1>
-            <p className="mt-5 max-w-lg text-lg text-muted-foreground">PhysioMind AI brings your curriculum, notes, BCQs, viva prep, special tests and guided clinical reasoning into one structured learning space.</p>
+            <p className="mt-5 max-w-lg text-lg text-muted-foreground">PhysioSmart AI brings your curriculum, notes, BCQs, viva prep, special tests and guided clinical reasoning into one structured learning space.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/curriculum" className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-soft hover:opacity-90">Start Learning <ArrowRight className="h-4 w-4" /></Link>
               <Link to="/case-simulator" className="inline-flex items-center gap-2 rounded-xl border-2 border-accent bg-card px-6 py-3 font-semibold text-accent hover:bg-success-soft">Practice Clinical Cases</Link>

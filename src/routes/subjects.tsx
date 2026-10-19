@@ -6,13 +6,11 @@ import { Button } from "@/components/ui/button";
 import { SourceReference, SemesterFilter, SubjectSearch } from "@/components/curriculum-controls";
 import { filterCourses, creditLabel } from "@/lib/curriculum";
 import { courseOutlines } from "@/lib/course-outlines";
+import { learningSearch } from "@/lib/study-materials";
 
 export const Route = createFileRoute("/subjects")({
   head: () => meta("Subjects", "Explore core DPT subjects with lectures, notes and practice questions."),
-  validateSearch: (search: Record<string, unknown>): { semester?: string; course?: string } => ({
-    semester: typeof search.semester === "string" ? search.semester : undefined,
-    course: typeof search.course === "string" ? search.course : undefined,
-  }),
+  validateSearch: learningSearch,
   component: Page,
 });
 
