@@ -80,6 +80,6 @@ export const studyMaterials: StudyMaterial[] = rows.map(([courseId, title, note,
 export function filterMaterials(semester: string, subject: string) {
   return studyMaterials.filter((m) => (semester === "all" || getCourse(m.courseId)?.semester === Number(semester)) && (subject === "all" || subject === m.courseId));
 }
-export function learningSearch(search: Record<string, unknown>): { semester?: string; course?: string } {
+export function learningSearch(search: Record<string, unknown>): { semester?: string | undefined; course?: string | undefined } {
   return { semester: typeof search["semester"] === "string" ? search["semester"] : undefined, course: typeof search["course"] === "string" ? search["course"] : undefined };
 }
