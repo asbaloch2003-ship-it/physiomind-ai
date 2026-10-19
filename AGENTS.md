@@ -10,6 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Curriculum architecture
+- Keep the homepage's educational clinical workflow in a presentation-only component; it illustrates the pathway without implying live AI execution.
 - Keep semester assignments, course identifiers and credit values in `src/lib/curriculum.ts`; all learning sections use this registry to prevent inconsistent subject mappings.
 - Keep independently authored notes, viva prompts and BCQs linked to course identifiers, separate from extracted official course outlines; source provenance must remain distinguishable from study content.
 - Serve the uploaded curriculum via a Lovable asset pointer and page-specific links so students can verify source content without committing a binary PDF.
