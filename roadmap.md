@@ -5,7 +5,7 @@
 - [x] Test curriculum mappings and verify the learning flow.
 
 # Homepage refresh
-- [ ] Refine hero, connected clinical workflow, learning cards, classroom-to-clinic sections and call to action; verify layout and links.
+- [x] Refine hero, connected clinical workflow, learning cards, classroom-to-clinic sections and call to action; verify layout and links.
 
 # Remaining sample sections
 - [ ] Replace placeholder Special Tests entries with curriculum-linked tests.
