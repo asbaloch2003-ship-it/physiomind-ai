@@ -14,7 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bcq_attempts: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          question_version: string
+          selected_option: number
+          user_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id: string
+          question_version?: string
+          selected_option: number
+          user_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          question_version?: string
+          selected_option?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bcq_attempts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          semester: number | null
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id: string
+          semester?: number | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          semester?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
