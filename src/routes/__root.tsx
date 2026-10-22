@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Header, Footer } from "../components/site";
+import { StudentSessionProvider } from "@/components/student-session";
 
 function NotFoundComponent() {
   return (
@@ -78,9 +79,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
+      <StudentSessionProvider>
       <Header />
       <main><Outlet /></main>
       <Footer />
+      </StudentSessionProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import { Menu, X, ShieldAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useStudentSession } from "@/components/student-session";
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/curriculum", label: "Curriculum" },
@@ -30,6 +35,16 @@ export function Logo() {
 
 export function Header() {
   const [open, setOpen] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
+  const { user, loading } = useStudentSession();
+  const client = useQueryClient();
+  const navigate = useNavigate();
+  async function signOut() {
+    await client.cancelQueries(); client.clear();
+    const { error } = await supabase.auth.signOut();
+    if (error) { setSignOutError("Could not sign out. Please try again."); return; }
+    setOpen(false); await navigate({ to: "/auth", replace: true });
+  }
   return (
     <header className="sticky top-0 z-40 border-b bg-card/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
@@ -39,8 +54,12 @@ export function Header() {
             <Link key={n.to} to={n.to} className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-secondary hover:text-foreground" activeProps={{ className: "bg-primary-soft !text-primary font-medium" }}>{n.label}</Link>
           ))}
         </nav>
-        <button aria-label="Toggle menu" className="xl:hidden" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</button>
+        <div className="flex items-center gap-2">
+          {!loading && (user ? <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button> : <Button asChild size="sm"><Link to="/auth">Sign in</Link></Button>)}
+          <Button variant="ghost" size="icon" aria-label="Toggle menu" className="xl:hidden" onClick={() => setOpen(!open)}>{open ? <X /> : <Menu />}</Button>
+        </div>
       </div>
+      {signOutError && <p role="alert" className="px-4 text-sm text-destructive">{signOutError}</p>}
       {open && (
         <nav className="grid gap-1 border-t bg-card p-4 xl:hidden">
           {nav.map((n) => <Link key={n.to} to={n.to} onClick={() => setOpen(false)} className="rounded-md px-3 py-2 text-sm hover:bg-secondary">{n.label}</Link>)}
