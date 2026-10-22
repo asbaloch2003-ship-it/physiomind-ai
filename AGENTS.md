@@ -14,3 +14,8 @@
 - Keep semester assignments, course identifiers and credit values in `src/lib/curriculum.ts`; all learning sections use this registry to prevent inconsistent subject mappings.
 - Keep independently authored notes, viva prompts and BCQs linked to course identifiers, separate from extracted official course outlines; source provenance must remain distinguishable from study content.
 - Serve the uploaded curriculum via a Lovable asset pointer and page-specific links so students can verify source content without committing a binary PDF.
+
+## Student accounts and activity
+- Keep one root student-session subscriber; private Dashboard routes live under the client-only authenticated layout and private server functions use generated bearer authentication and owner-scoped RLS.
+- Store immutable, idempotent BCQ answer events by student and course with a question-version identifier; derive grades from the corresponding study-material registry and paginate history reads so Dashboard totals remain complete.
+- Keep profile fields separate from authorization; students may read and update only their own profile, created automatically on signup.
