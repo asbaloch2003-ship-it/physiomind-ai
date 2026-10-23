@@ -4,18 +4,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { meta } from "@/components/site";
+import { useStudentSession } from "@/components/student-session";
 
 export const Route = createFileRoute("/reset-password")({ head: () => meta("Reset Student Password", "Set a new password for your PhysioSmart AI student account."), component: Page });
 function Page() {
+  const { recovery: sessionRecovery } = useStudentSession();
   const [recovery, setRecovery] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setRecovery(new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery"); }, []);
+  useEffect(() => { setRecovery(sessionRecovery || new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery"); }, [sessionRecovery]);
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (!recovery) return;
     if (password !== confirmation) { setMessage("Passwords do not match."); return; }
     setBusy(true);
     const { error } = await supabase.auth.updateUser({ password });
