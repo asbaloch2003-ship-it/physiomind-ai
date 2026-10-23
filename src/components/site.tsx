@@ -11,6 +11,7 @@ const nav = [
   { to: "/curriculum", label: "Curriculum" },
   { to: "/subjects", label: "Subjects" },
   { to: "/special-tests", label: "Special Tests" },
+  { to: "/ai-assistant", label: "AI Assistant" },
   { to: "/case-simulator", label: "Case Simulator" },
   { to: "/quizzes", label: "BCQs" },
   { to: "/notes", label: "Notes" },
