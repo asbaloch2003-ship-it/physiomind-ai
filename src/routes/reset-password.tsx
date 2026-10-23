@@ -15,7 +15,22 @@ function Page() {
   const [message, setMessage] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { setRecovery(sessionRecovery || new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery"); }, [sessionRecovery]);
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.slice(1));
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+    if (hash.get("type") === "recovery" && accessToken && refreshToken) {
+      setBusy(true);
+      void supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
+        if (error) setMessage("This reset link is invalid or expired. Request a new link.");
+        else setRecovery(true);
+        setBusy(false);
+        window.history.replaceState(null, "", window.location.pathname);
+      });
+    } else if (sessionRecovery) {
+      void supabase.auth.getUser().then(({ data }) => setRecovery(Boolean(data.user)));
+    }
+  }, [sessionRecovery]);
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!recovery) return;
