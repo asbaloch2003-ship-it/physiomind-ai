@@ -10,7 +10,7 @@ import { meta } from "@/components/site";
 
 export const Route = createFileRoute("/auth")({
   head: () => meta("Student Sign In", "Create your PhysioSmart AI student profile and save your BCQ learning activity."),
-  validateSearch: (search: Record<string, unknown>) => ({ next: search["next"] === "/quizzes" ? "/quizzes" as const : "/dashboard" as const }),
+  validateSearch: (search: Record<string, unknown>): { next?: "/quizzes" | "/dashboard" } => ({ next: search["next"] === "/quizzes" ? "/quizzes" : "/dashboard" }),
   component: AuthPage,
 });
 
@@ -23,7 +23,7 @@ function AuthPage() {
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const { user } = useStudentSession();
-  const { next } = Route.useSearch();
+  const next = Route.useSearch().next ?? "/dashboard";
   const navigate = useNavigate();
   useEffect(() => { if (user) void navigate({ to: next, replace: true }); }, [user, next, navigate]);
   async function submit(event: FormEvent) {
