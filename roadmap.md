@@ -10,4 +10,4 @@
 # Remaining sample sections
 - [ ] Replace placeholder Special Tests entries with curriculum-linked tests.
 - [ ] Rebuild the Case Simulator around a course-identified case instead of the fixed knee sample.
-- [ ] Add student accounts and profiles, save BCQ attempts, and show real Dashboard activity.
+- [x] Add student accounts and profiles, save BCQ attempts, and show real Dashboard activity; verified sign-in, profile updates, saved answers, reload persistence, password recovery and student privacy.
