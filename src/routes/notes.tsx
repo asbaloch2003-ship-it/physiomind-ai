@@ -65,23 +65,17 @@ function topicsFor(id:string) {
   return key?outlines[key]:["Introduction","Core concepts","Important principles","Practical applications","Revision"];
 }
 function NotesText({value}:{value:string}) {
-  const normalized=value.replace(/\r/g,"").replace(/\s+(#{1,4})\s+/g,"\n$1 ").replace(/\s+\*\s+(?=\*\*|[A-Z])/g,"\n- ");
-  const lines=normalized.split("\n").map(s=>s.trim()).filter(Boolean);
-  function inline(s:string) {
-    return s.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j} className="font-semibold text-foreground">{part.slice(2,-2)}</strong>:part.startsWith("*")&&part.endsWith("*")?<em key={j}>{part.slice(1,-1)}</em>:part);
-  }
-  return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
-    {lines.map((raw,i)=>{
-      const line=raw.replace(/^\\?\*\s*(?=\*\*|[A-Za-z])/,"- ");
-      const heading=line.match(/^#{1,6}\s+(.+)$/);
-      if(heading)return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{inline(heading[1])}</h3>;
-      if(/^\*\*[^*]+\*\*:?$/.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{inline(line.replace(/:$/,""))}</h3>;
-      if(/^[-*•]\s*/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span aria-hidden="true" className="font-bold text-primary">•</span><p className="min-w-0">{inline(line.replace(/^[-*•]\s*/,""))}</p></div>;
-      if(/^\d+[.)]\s+/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span className="shrink-0 font-semibold text-primary">{line.match(/^\d+[.)]/)?.[0]}</span><p>{inline(line.replace(/^\d+[.)]\s+/,""))}</p></div>;
-      if(/^(Definition|Key Concepts|Easy Explanation|Example|Clinical Relevance|Quick Revision|Viva Questions|Summary|Classification|Origin|Insertion|Nerve Supply|Actions|Functions|Anatomical Location)\s*:?$/i.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
-      return <p key={i}>{inline(line)}</p>;
-    })}
-  </article>;
+  const cleaned=value.replace(/\r/g,"").replace(/\\\*/g,"*").replace(/\*\*/g,"").replace(/\*/g,"").replace(/(^|\n)\s*#{1,6}\s*/g,"$1").replace(/\s+#{2,6}\s+/g,"\n").replace(/\s+[-•]\s+(?=[A-Z])/g,"\n- ");
+  const lines=cleaned.split("\n").map(s=>s.trim()).filter(Boolean);
+  return <article className="space-y-3 text-[15px] leading-7 text-foreground/90">{lines.map((line,i)=>{
+    const numbered=line.match(/^(\d+)[.)]\s+(.+)$/);
+    const bullet=line.match(/^[-•]\s*(.+)$/);
+    const heading=/^(Introduction|Definition|Overview|Classification|Types|Key Concepts|Easy Explanation|Detailed Explanation|Mechanism|Functions|Actions|Origin|Insertion|Nerve Supply|Anatomical Location|Position|Examples?|Clinical Relevance|Clinical Applications|Practical Applications|Summary|Quick Revision|Important Points|Viva Questions|Questions and Answers|Causes|Symptoms|Management|Procedure|Precautions|Contraindications|Indications|Principles|Applications|Conclusion)\s*:?$/i.test(line);
+    if(heading)return <h3 key={i} className="mt-6 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
+    if(bullet||numbered)return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span className="shrink-0 font-semibold text-primary">{numbered?numbered[1]+".":"•"}</span><p className="min-w-0">{(numbered?numbered[2]:bullet?.[1])||""}</p></div>;
+    if(line.endsWith(":")&&line.length<90)return <h3 key={i} className="mt-6 text-base font-bold text-foreground">{line.slice(0,-1)}</h3>;
+    return <p key={i}>{line}</p>;
+  })}</article>;
 }
 function Page(){
   const search=Route.useSearch();
@@ -98,7 +92,9 @@ function Page(){
     if(!course||t.trim().length<3||busy)return;
     setBusy(true);setError("");setAnswer("");setTopic(t);
     try{
-      const question="Write comprehensive but simple textbook-style DPT revision notes for Semester "+course.semester+", subject "+course.name+", topic "+t+". Explain the topic fully and systematically, not only its definition. Cover all important subtopics, classifications, mechanisms, real examples, clinical applications, and 3 viva questions with answers. For anatomy or muscles: identify the anatomical region and provide individual important muscles with their position/location, origin, insertion, nerve supply and function/action, organized by anatomical group. If the requested topic is broad, explain key groups in depth and state which regions should be studied next rather than falsely claiming to cover every muscle in one answer. Use clear Markdown headings, bullets and numbered points; no unsupported citations.";
+      const nonClinical = /^(english-|pakistan-studies|computer$|islamic-studies$|sociology$|biostatistics-|research-methodology$|research-project$|professional-practice$)/.test(course.id);
+      const application = nonClinical ? "Explain subject-specific applications and worked examples; do not include clinical relevance, patient cases or physiotherapy applications unless directly requested or genuinely part of the topic." : "Include clinical relevance and physiotherapy applications only when they naturally apply to the topic.";
+      const question="Create detailed, simple, comprehensive DPT study notes for semester "+course.semester+", subject "+course.name+", topic "+t+". Explain all important subtopics, concepts, classifications, processes, examples and exam points in depth, not just a definition. "+application+" For anatomical muscle topics, cover anatomical location, origin, insertion, nerve supply and actions for individual major muscles, grouping by region. For non-muscle topics, adapt headings and details to that subject. Include revision points and three viva questions with answers. IMPORTANT FORMAT: Output plain text only, with separate lines for headings and list items. NEVER output Markdown formatting: no asterisks, no hash signs, no backticks, no bold or italic markup. Use ordinary headings and numbered points. Do not invent sources.";
       const result=await ask({data:{mode:"notes",question}});
       setAnswer(result.answer);
     }catch(e){setError(e instanceof Error?e.message:"Could not generate notes.");}
