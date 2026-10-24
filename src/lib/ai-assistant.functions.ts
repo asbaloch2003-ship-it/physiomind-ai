@@ -16,7 +16,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured on this server yet. Add GEMINI_API_KEY as a server-only secret.");
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
     if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new Error("Invalid AI model configuration.");
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 25000);
