@@ -29,6 +29,9 @@ function InlineAnswer({ text }: { text: string }) {
 }
 function FormattedAnswer({ text }: { text: string }) {
   const normalized = text.replace(/\r\n?/g,"\n")
+    .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*$/gm,"$1")
+    .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*/gm,"$1 ")
+    .replace(/^\s*\*\*([^*]+)\*\*\s*$/gm,"**$1**")
     .replace(/[ \t]+(#{1,4})[ \t]+/g,"\n\n$1 ")
     .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g,"$1\n$2")
     .replace(/\n{3,}/g,"\n\n");
@@ -39,8 +42,9 @@ function FormattedAnswer({ text }: { text: string }) {
       if(!line)return null;
       const heading=line.match(/^#{1,6}\s+(.+)$/);
       if(heading)return <h3 key={i} className="mt-8 border-b border-border pb-3 text-lg font-bold tracking-tight text-foreground"><InlineAnswer text={heading[1]}/></h3>;
-      const bullet=line.match(/^[-*•]\s+(.+)$/);
-      if(bullet)return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">•</span><p className="min-w-0 flex-1"><InlineAnswer text={bullet[1]}/></p></div>;
+      const bullet=line.match(/^(?:[-*•]|\*\*[•-]\*\*)\s*(.*)$/);
+      if(bullet && bullet[1].trim())return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">•</span><p className="min-w-0 flex-1"><InlineAnswer text={bullet[1]}/></p></div>;
+      if(bullet && !bullet[1].trim())return null;
       const numbered=line.match(/^(\d+[.)])\s+(.+)$/);
       if(numbered)return <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/35 px-3 py-2"><span className="shrink-0 font-bold text-primary">{numbered[1]}</span><p className="min-w-0 flex-1"><InlineAnswer text={numbered[2]}/></p></div>;
       if(/^\*\*[^*]+\*\*:?$/.test(line))return <h4 key={i} className="mt-6 text-base font-bold text-foreground"><InlineAnswer text={line.replace(/:$/,"")}/></h4>;
