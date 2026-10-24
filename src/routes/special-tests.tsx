@@ -20,25 +20,41 @@ const tests:Test[] = [
 ];
 const regions = ["All", ...Array.from(new Set(tests.map(t=>t.region)))];
 
-function Diagram({type}:{type:string}) {
-  const area:Record<string,{label:string;x:number;y:number}> = {
-    knee:{label:"Knee",x:150,y:145}, shoulder:{label:"Shoulder",x:106,y:63},
-    leg:{label:"Raised leg",x:148,y:146}, wrist:{label:"Wrist",x:89,y:132},
-    hip:{label:"Hip",x:135,y:119}, neck:{label:"Neck",x:145,y:58},
-  };
-  const spot=area[type]||area.knee;
-  return <figure className="rounded-xl border bg-secondary/40 p-3">
-    <svg viewBox="0 0 320 220" role="img" aria-label={"Simplified front-view body diagram showing the "+spot.label.toLowerCase()+" region"} className="mx-auto h-48 w-full max-w-sm">
-      <rect x="1" y="1" width="318" height="218" rx="14" fill="none" stroke="currentColor" strokeOpacity=".13"/>
-      <circle cx="160" cy="36" r="18" fill="#dbeafe" stroke="#64748b" strokeWidth="2"/>
-      <path d="M151 55 L144 65 L116 72 L126 116 L141 128 L179 128 L194 116 L204 72 L176 65 L169 55" fill="#dbeafe" stroke="#64748b" strokeWidth="2" strokeLinejoin="round"/>
-      <path d="M117 75 L96 120 L89 158 M203 75 L224 120 L231 158 M145 129 L142 166 L139 199 M176 129 L180 166 L185 199" fill="none" stroke="#64748b" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx={spot.x} cy={spot.y} r="16" fill="#2563eb" fillOpacity=".18" stroke="#2563eb" strokeWidth="3"/>
-      <path d={"M"+(spot.x+15)+" "+(spot.y-10)+" L260 44"} stroke="#2563eb" strokeWidth="2" strokeDasharray="5 4" fill="none"/>
-      <rect x="223" y="20" width="85" height="30" rx="8" fill="#2563eb"/>
-      <text x="265" y="39" textAnchor="middle" fontSize="11" fontWeight="bold" fill="white">{spot.label}</text>
+function Diagram({type,name}:{type:string;name:string}) {
+  const isKnee=type==="knee", isShoulder=type==="shoulder", isLeg=type==="leg", isWrist=type==="wrist", isHip=type==="hip", isNeck=type==="neck";
+  const focus=isKnee?[286,123]:isShoulder?[157,108]:isLeg?[288,113]:isWrist?[210,95]:isHip?[237,123]:[158,69];
+  return <figure className="overflow-hidden rounded-2xl border bg-white shadow-sm">
+    <div className="flex items-center justify-between gap-2 border-b bg-slate-50 px-4 py-3"><strong className="text-sm text-slate-900">Clinical positioning illustration</strong><span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-800">{name}</span></div>
+    <svg viewBox="0 0 540 295" role="img" aria-label={name+" illustrated examination position with patient, clinician, assessment contact and direction arrow"} className="w-full">
+      <defs><linearGradient id="patientShade" x1="0" y1="0" x2="0.9" y2="1"><stop stopColor="#f7c9a5"/><stop offset="1" stopColor="#d99270"/></linearGradient><linearGradient id="scrubs" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#2563a6"/><stop offset="1" stopColor="#12335f"/></linearGradient><marker id="forceArrow" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0 0 L7 3 L0 6" fill="none" stroke="#e11d48" strokeWidth="1.6"/></marker></defs>
+      <rect width="540" height="295" fill="#f1f5f9"/>
+      <path d="M0 244 H540" stroke="#cbd5e1" strokeWidth="2"/>
+      <rect x="30" y="169" width="332" height="14" rx="7" fill="#3d536e"/><path d="M57 182 V245 M336 182 V245" stroke="#475569" strokeWidth="10"/>
+      <rect x="30" y="156" width="330" height="16" rx="6" fill="#8fb6cb"/>
+      {isWrist||isNeck?<g>
+        <path d="M102 151 L103 106 Q103 82 133 77 L180 77 Q202 81 205 112 L207 157" fill="url(#scrubs)" stroke="#24496d" strokeWidth="2"/>
+        <rect x="136" y="65" width="28" height="25" rx="9" fill="url(#patientShade)"/><circle cx="150" cy="46" r="23" fill="url(#patientShade)" stroke="#bd795c" strokeWidth="2"/>
+        <path d="M105 107 L89 145 L102 151 M197 106 L217 133 L230 117" stroke="#d99270" strokeWidth="15" fill="none" strokeLinecap="round"/>
+      </g>:<g>
+        <circle cx="64" cy="133" r="20" fill="url(#patientShade)" stroke="#bd795c" strokeWidth="2"/>
+        <path d="M83 137 Q115 128 153 140 L218 145 Q234 146 238 158 L151 159 L87 152Z" fill="url(#scrubs)"/>
+        <path d="M91 151 L170 160 L230 160" stroke="#d99270" strokeWidth="10" fill="none" strokeLinecap="round"/>
+        <path d={isLeg?"M232 152 L280 112 L339 70":isHip?"M232 151 L258 124 L298 150":isKnee?"M232 153 L286 123 L337 158":"M232 151 L284 155 L335 158"} stroke="url(#patientShade)" strokeWidth="23" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d={isLeg?"M232 158 L294 160 L350 162":isHip?"M232 154 L290 160 L345 161":"M232 157 L288 160 L345 160"} stroke="#d99270" strokeWidth="16" fill="none" strokeLinecap="round"/>
+      </g>}
+      <g>
+        <circle cx="422" cy="54" r="22" fill="url(#patientShade)" stroke="#bd795c" strokeWidth="2"/>
+        <path d="M398 80 Q420 74 445 81 L457 154 L396 154Z" fill="url(#scrubs)" stroke="#24496d" strokeWidth="2"/>
+        <path d="M409 151 L404 236 M442 151 L450 236" stroke="#243e62" strokeWidth="19" fill="none" strokeLinecap="round"/>
+        <path d={isWrist?"M402 104 L327 112 L220 116 M444 103 L346 128 L231 117":isNeck?"M401 104 L344 74 L168 66 M444 103 L339 89 L172 72":isShoulder?"M401 107 L328 98 L163 109 M445 105 L351 126 L183 114":isHip?"M402 107 L343 119 L248 125 M445 108 L347 146 L256 132":"M402 107 L345 122 L283 122 M445 107 L358 151 L296 132"} stroke="url(#patientShade)" strokeWidth="14" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+      </g>
+      <circle cx={focus[0]} cy={focus[1]} r="21" fill="#fbbf24" fillOpacity=".25" stroke="#e59c16" strokeWidth="3" strokeDasharray="5 4"/>
+      <path d={isLeg?"M287 114 L321 78":isShoulder?"M169 105 L169 64":isNeck?"M158 65 L171 85":isHip?"M245 121 L262 91":isWrist?"M216 110 L247 139":"M279 128 L311 119"} stroke="#e11d48" strokeWidth="4" fill="none" markerEnd="url(#forceArrow)"/>
+      <rect x="15" y="12" width="166" height="29" rx="7" fill="#fff" stroke="#cbd5e1"/><text x="98" y="31" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#0f172a">Patient positioning</text>
+      <rect x="360" y="12" width="164" height="29" rx="7" fill="#fff" stroke="#cbd5e1"/><text x="442" y="31" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#0f172a">Physiotherapist</text>
+      <rect x="15" y="256" width="510" height="28" rx="7" fill="#fff" stroke="#cbd5e1"/><circle cx="29" cy="270" r="6" fill="#fbbf24" fillOpacity=".4" stroke="#e59c16"/><text x="43" y="274" fontSize="12" fill="#334155">Highlighted contact area</text><path d="M253 270 H280" stroke="#e11d48" strokeWidth="3" markerEnd="url(#forceArrow)"/><text x="290" y="274" fontSize="12" fill="#334155">Illustrative movement direction</text>
     </svg>
-    <figcaption className="mt-1 text-center text-xs text-muted-foreground">Simplified orientation diagram — highlighted assessment region, not a demonstration of hand placement.</figcaption>
+    <figcaption className="px-4 py-3 text-xs leading-5 text-slate-600">Schematic teaching illustration, not a clinical photograph. Use the exact written positioning and hand-placement instructions below; the image is not to scale.</figcaption>
   </figure>;
 }
 
@@ -54,7 +70,7 @@ function Page() {
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-1 text-sm text-muted-foreground">{t.purpose}</p></div><Tag>{t.region}</Tag></div>
         <button type="button" aria-expanded={opened===t.name} onClick={()=>setOpened(opened===t.name?null:t.name)} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-left text-sm font-semibold text-primary-foreground">{opened===t.name?"− Close detailed guide":"+ Open detailed guide"}</button>
         {opened===t.name&&<div className="mt-5 space-y-4 text-sm leading-6">
-          <Diagram type={t.diagram}/>
+          <Diagram type={t.diagram} name={t.name}/>
           <div><h3 className="font-bold text-primary">Patient position</h3><p>{t.patient}</p></div>
           <div><h3 className="font-bold text-primary">Physiotherapist position and hand placement</h3><p>{t.therapist}</p></div>
           <div><h3 className="font-bold text-primary">Step-by-step procedure</h3><ol className="mt-2 list-inside list-decimal space-y-2">{t.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></div>
