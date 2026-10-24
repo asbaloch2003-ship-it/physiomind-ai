@@ -1,64 +1,12 @@
-# PhysioMind AI
+# PhysioSmart AI
 
-Create a professional modern web application called "PhysioMind AI".
+An educational physiotherapy learning platform for DPT students in Pakistan. Explore semester-wise curriculum, study notes, special tests, BCQs, and AI-supported fictional case reasoning.
 
-It is an AI-powered learning and clinical reasoning platform designed specifically for Doctor of Physical Therapy (DPT) students in Pakistan.
+**Educational use only:** Do not submit identifiable patient data. AI outputs do not replace qualified professional assessment.
 
-Main goal:
+The website supports PWA installation on compatible browsers using its web manifest and service worker. AI features require an internet connection and a configured server-side `GEMINI_API_KEY`.
 
-Help DPT students learn their complete curriculum, study notes, lectures, BCQs, viva questions, physiotherapy special tests, clinical assessment and evidence-informed clinical reasoning.
-
-The website should look like a professional healthcare education technology startup, not a basic student notes website.
-
-Create these main pages:
-
-1. Home
-
-2. DPT Curriculum
-
-3. Subjects
-
-4. Special Tests
-
-5. AI Clinical Case Simulator
-
-6. BCQs & Quizzes
-
-7. Notes
-
-8. Clinical Resources
-
-9. Student Dashboard
-
-10. About
-
-Home page should contain:
-
-- PhysioMind AI logo/name
-
-- Tagline: "Don't just learn physiotherapy. Learn to think like a physiotherapist."
-
-- Short explanation of the platform
-
-- "Start Learning" button
-
-- "Practice Clinical Cases" button
-
-- Feature cards for DPT Curriculum, Special Tests, AI Clinical Reasoning, BCQs and Evidence-Based Learning
-
-- A clean medical/education visual design
-
-- Responsive design for desktop, tablet and mobile
-
-Use a professional blue/white healthcare color scheme with subtle green accents.
-
-Make the interface modern, clean, accessible and suitable for a university-level educational technology competition.
-
-Do not create fake medical claims.
-
-The platform is for educational purposes and should clearly state that AI-generated clinical reasoning does not replace a qualified healthcare professional.
-
-This project was built with [Lovable](https://lovable.dev).
+For competition preparation and limitations see [COMPETITION_READINESS.md](COMPETITION_READINESS.md).
 
 ## Build with Lovable
 
