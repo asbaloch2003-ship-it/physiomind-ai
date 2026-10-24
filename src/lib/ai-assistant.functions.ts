@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforceAiRateLimit } from "./ai-rate-limit";
 
 const Input = z.object({
   mode: z.enum(["clinical", "study", "quiz", "notes"]),
@@ -19,6 +20,7 @@ type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: 
 export const askPhysioAI = createServerFn({ method: "POST" })
   .inputValidator((value: unknown) => Input.parse(value))
   .handler(async ({ data }) => {
+    enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
     const preferred = process.env.GEMINI_MODEL || "gemini-3.8-flash";
