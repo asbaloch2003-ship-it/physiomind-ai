@@ -16,7 +16,10 @@ const modes: { value: Mode; label: string; example: string }[] = [
   { value: "study", label: "Study tutor", example: "Explain the gait cycle phases and the role of major lower limb muscles in simple language for a DPT student." },
   { value: "quiz", label: "Quiz explanations", example: "In a BCQ about the Trendelenburg sign, why does pelvic drop suggest hip abductor weakness? Explain common distractors." },
 ];
-function FormattedAnswer({ text }: { text: string }) {\n  return <div className="whitespace-pre-wrap text-sm leading-7">{text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part}</span>)}</div>;\n}\nfunction Page() {
+function FormattedAnswer({ text }: { text: string }) {
+  return <div className="whitespace-pre-wrap text-sm leading-7">{text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part}</span>)}</div>;
+}
+function Page() {
   const [mode, setMode] = useState<Mode>("clinical");
   const [question, setQuestion] = useState(modes[0].example);
   const [answer, setAnswer] = useState("");
