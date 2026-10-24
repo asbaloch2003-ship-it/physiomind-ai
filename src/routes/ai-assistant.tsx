@@ -19,35 +19,30 @@ const modes: { value: Mode; label: string; example: string }[] = [
   { value: "quiz", label: "Quiz explanations", example: "In a BCQ about the Trendelenburg sign, why does pelvic drop suggest hip abductor weakness? Explain common distractors." },
 ];
 function InlineAnswer({ text }: { text: string }) {
-  return <>{text.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((part, i) =>
-    part.startsWith("**") && part.endsWith("**")
-      ? <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
-      : part.startsWith("*") && part.endsWith("*")
+  const cleaned=text.replace(/\\\*/g,"*").replace(/^\*\*•\*\*\s*/,"");
+  return <>{cleaned.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((part,i)=>
+    part.startsWith("**")&&part.endsWith("**")
+      ? <strong key={i} className="font-semibold text-foreground">{part.slice(2,-2)}</strong>
+      : part.startsWith("*")&&part.endsWith("*")
         ? <em key={i}>{part.slice(1,-1)}</em>
         : <span key={i}>{part}</span>
   )}</>;
 }
 function FormattedAnswer({ text }: { text: string }) {
-  const normalized = text.replace(/\r\n?/g,"\n")
+  const normalized=text.replace(/\r\n?/g,"\n")
     .replace(/\\\*/g,"*")
     .replace(/^[ \t]*(?:\*\*\s*[•-]\s*\*\*|[•*-])[ \t]*$/gm,"")
     .replace(/^[ \t]*\*\*\s*[•-]\s*\*\*[ \t]*/gm,"- ")
-    .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*$/gm,"$1")
-    .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*/gm,"$1 ")
-    .replace(/^\s*\*\*([^*]+)\*\*\s*$/gm,"**$1**")
     .replace(/[ \t]+(#{1,4})[ \t]+/g,"\n\n$1 ")
-    .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g,"$1\n$2")
-    .replace(/\n{3,}/g,"\n\n");
-  const lines=normalized.split("\n").filter(line=>!/^\s*(?:\*\*\s*[•-]\s*\*\*|[•*-])?\s*$/.test(line));
+    .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g,"$1\n$2");
+  const lines=normalized.split("\n").map(s=>s.trim()).filter(Boolean);
   return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
-    {lines.map((raw,i)=>{
-      const line=raw.trim();
-      if(!line)return null;
+    {lines.map((line,i)=>{
+      if(/^(?:\*\*)?[•*-](?:\*\*)?$/.test(line))return null;
       const heading=line.match(/^#{1,6}\s+(.+)$/);
       if(heading)return <h3 key={i} className="mt-8 border-b border-border pb-3 text-lg font-bold tracking-tight text-foreground"><InlineAnswer text={heading[1]}/></h3>;
-      const bullet=line.match(/^(?:[-*•]|\*\*[•-]\*\*)\s*(.*)$/);
-      if(bullet && bullet[1].trim())return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">•</span><p className="min-w-0 flex-1"><InlineAnswer text={bullet[1]}/></p></div>;
-      if(bullet && !bullet[1].trim())return null;
+      const bullet=line.match(/^(?:[-*•]|\*\*[•-]\*\*)\s+(.+)$/);
+      if(bullet)return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">•</span><p className="min-w-0 flex-1"><InlineAnswer text={bullet[1]}/></p></div>;
       const numbered=line.match(/^(\d+[.)])\s+(.+)$/);
       if(numbered)return <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/35 px-3 py-2"><span className="shrink-0 font-bold text-primary">{numbered[1]}</span><p className="min-w-0 flex-1"><InlineAnswer text={numbered[2]}/></p></div>;
       if(/^\*\*[^*]+\*\*:?$/.test(line))return <h4 key={i} className="mt-6 text-base font-bold text-foreground"><InlineAnswer text={line.replace(/:$/,"")}/></h4>;
