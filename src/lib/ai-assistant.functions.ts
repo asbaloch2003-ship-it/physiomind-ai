@@ -32,8 +32,11 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         }),
       });
       if (!response.ok) {
-        if (response.status === 429) throw new Error("The AI free-tier request limit has been reached. Please try later.");
-        throw new Error("AI service is unavailable right now. Please retry or check the configured model.");
+        if (response.status === 429) throw new Error("Gemini quota exceeded (HTTP 429). Check free-tier limits.");
+        if (response.status === 400) throw new Error("Gemini rejected the request (HTTP 400). Check model configuration.");
+        if (response.status === 401 || response.status === 403) throw new Error("Gemini API access denied (HTTP " + response.status + "). Check API key permissions.");
+        if (response.status === 404) throw new Error("Gemini model " + model + " unavailable (HTTP 404). Set GEMINI_MODEL to an available model.");
+        throw new Error("Gemini request failed (HTTP " + response.status + ").");
       }
       const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       const answer = result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
