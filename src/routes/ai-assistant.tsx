@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { askPhysioAI } from "@/lib/ai-assistant.functions";
 import { Container, PageHeader, Disclaimer, meta } from "@/components/site";
@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 export const Route = createFileRoute("/ai-assistant")({
-  head: () => meta("AI Clinical & Study Assistant", "Ask Gemini-powered educational physiotherapy questions."),
+  head: () => meta("AI Clinical & Study Assistant", "Ask AI-powered educational physiotherapy questions."),
+  validateSearch: (search: Record<string,unknown>) => ({topic:typeof search.topic==="string"?search.topic.slice(0,180):"",subject:typeof search.subject==="string"?search.subject.slice(0,180):"",semester:typeof search.semester==="string"?search.semester.slice(0,10):"",auto:search.auto==="1"?"1":""}),
   component: Page,
 });
 type Mode = "clinical" | "study" | "quiz";
@@ -48,12 +49,16 @@ function FormattedAnswer({ text }: { text: string }) {
   </div>;
 }
 function Page() {
-  const [mode, setMode] = useState<Mode>("clinical");
-  const [question, setQuestion] = useState(modes[0].example);
+  const search=Route.useSearch();
+  const incoming=search.topic.trim();
+  const initial=incoming ? "Teach me the topic "+incoming+" in "+(search.subject||"my DPT subject")+(search.semester?" (semester "+search.semester+")":"")+". Explain important concepts and subtopics clearly with examples, and include clinical relevance only if appropriate to this subject." : modes[0].example;
+  const [mode, setMode] = useState<Mode>(incoming?"study":"clinical");
+  const [question, setQuestion] = useState(initial);
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const ask = useServerFn(askPhysioAI);
+  useEffect(()=>{if(!incoming)return;setMode("study");setQuestion(initial);setAnswer("");setError("");},[incoming,initial]);
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
