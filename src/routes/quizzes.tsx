@@ -17,11 +17,10 @@ function Page() {
   const [semester, setSemester] = useState(search.semester ?? "all");
   const [subject, setSubject] = useState(search.course ?? "all");
   const [ans, setAns] = useState<Record<string, number>>({});
-  const [revealed, setRevealed] = useState(false);
   function pick(courseId: string, selectedOption: number) {
     setAns(prev => ({ ...prev, [courseId]: selectedOption }));
   }
-  function reset() { setAns({}); setRevealed(false); }
+  function reset() { setAns({}); }
   const list = filterMaterials(semester, subject);
   const answered = list.filter((m) => ans[m.courseId] !== undefined).length;
   const score = list.filter((m) => ans[m.courseId] === m.answer).length;
