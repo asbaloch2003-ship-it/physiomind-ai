@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState }
+import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { generateTopicBcqs } from "@/lib/ai-bcqs.functions"; from "react";
+import { generateTopicBcqs } from "@/lib/ai-bcqs.functions";
 import { Button } from "@/components/ui/button";
 import { Card, Container, PageHeader, meta } from "@/components/site";
 import { SourceReference, StudyFilters } from "@/components/curriculum-controls";
