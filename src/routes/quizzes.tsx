@@ -50,7 +50,7 @@ function Page() {
                   })}
                 </div>
                 {picked && <p className="mt-3 text-sm text-muted-foreground">{ans[m.courseId] === m.answer ? "Correct." : `Not quite — the expected answer is “${m.options[m.answer]}”.`}</p>}
-                {picked && <p className="mt-2 text-xs text-muted-foreground">Review the correct option above, then continue to the next question.</p>}
+                {picked && <div className="mt-3 rounded-lg bg-secondary p-4 text-sm leading-6"><strong>Why this answer?</strong><p className="mt-1 text-muted-foreground">{m.note}</p></div>}
               </Card>
             );
           })}
