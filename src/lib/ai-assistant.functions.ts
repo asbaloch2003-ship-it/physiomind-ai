@@ -7,82 +7,68 @@ const Input = z.object({
 });
 
 const guidance = {
-  clinical: "For a fictional physiotherapy teaching case: organize response under Red flags & urgent referral, Missing history, Assessment, Differential considerations, Special tests (indications and limitations), Rehabilitation options, Outcome measures, Prognosis, and Learning references. Do not assert a diagnosis or prescribe treatment for a real patient. If emergency symptoms appear, clearly recommend urgent in-person medical evaluation. Never fabricate citations; identify sources to verify rather than inventing papers.",
-  study: "Explain DPT physiotherapy concepts clearly using a short summary, foundational explanation, practical example, key takeaways and self-check question. Clearly identify uncertainty.",
-  quiz: "Teach the reasoning behind a physiotherapy multiple-choice answer. Explain why distractors may be wrong, and do not assume an answer key without evidence.",
+  clinical: "For a fictional physiotherapy case, briefly cover red flags, relevant history, assessments, possible explanations, and safe rehabilitation principles. Never diagnose a real patient or fabricate citations.",
+  study: "Explain the physiotherapy concept clearly, with a practical example and key takeaway.",
+  quiz: "Explain the correct physiotherapy reasoning, and why alternatives might be wrong when options are provided.",
 };
+
+type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+
 export const askPhysioAI = createServerFn({ method: "POST" })
   .inputValidator((value: unknown) => Input.parse(value))
   .handler(async ({ data }) => {
     const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("AI is not configured on this server yet. Add GEMINI_API_KEY as a server-only secret.");
-    const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-    if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new Error("Invalid AI model configuration.");
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
-    try {
-      const request = () => fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
-        method: "POST",
-        signal: controller.signal,
-        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-        body: JSON.stringify({
-          model,
-          input: "You are PhysioSmart AI, an educational tutor for Doctor of Physical Therapy students in Pakistan. Never request or retain identifying patient information. Your answer is educational, not medical advice. Do not fabricate references or certainty. " + guidance[data.mode] + "\n\nStudent question: " + data.question,
-          generation_config: { max_output_tokens: 900, thinking_level: "low" },
-          store: false,
-        }),
-      });
-      let response = await request();
-      if (response.status === 503 && !controller.signal.aborted) {
-        await new Promise(resolve => setTimeout(resolve, 1200));
-        response = await request();
-      }
-      if (!response.ok) {
-        // Google's structured error message explains which model, API version, or
-        // project permission failed. Never expose raw responses or credentials.
-        let detail = "";
-        try {
-          const payload: unknown = await response.json();
-          if (payload && typeof payload === "object" && "error" in payload) {
-            const error = payload.error;
-            if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
-              detail = error.message;
-            }
+    if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
+    const preferred = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
+
+    const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
+    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate and concise (100-200 words). " + guidance[data.mode];
+    let lastError = "Gemini is temporarily busy. Please try again shortly.";
+
+    for (const model of models) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 22000);
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+          {
+            method: "POST",
+            signal: controller.signal,
+            headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+            body: JSON.stringify({
+              systemInstruction: { parts: [{ text: prompt }] },
+              contents: [{ role: "user", parts: [{ text: data.question }] }],
+              generationConfig: { maxOutputTokens: 1200 },
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          if ([429, 500, 502, 503, 504].includes(response.status)) {
+            lastError = `Gemini model ${model} is busy (HTTP ${response.status}).`;
+            continue;
           }
-        } catch {
-          // A non-JSON response is possible; retain the HTTP status below.
+          if ([400, 404].includes(response.status)) {
+            lastError = `Gemini model ${model} is not supported for this request (HTTP ${response.status}).`;
+            continue;
+          }
+          if ([401, 403].includes(response.status)) throw new Error("Gemini API access denied. Check the server API key and project permissions.");
+          throw new Error(`Gemini request failed (HTTP ${response.status}).`);
         }
-        const safeDetail = detail
-          .replaceAll(key, "[REDACTED]")
-          .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]")
-          .replace(new RegExp("https?://[^ ]+", "g"), "[URL]")
-          .replace(new RegExp("[\\r\\n\\t]+", "g"), " ")
-          .slice(0, 450);
-        const label = response.status === 429 ? "Gemini free-tier quota"
-          : response.status === 401 || response.status === 403 ? "Gemini API access"
-          : response.status === 404 ? "Gemini model or endpoint"
-          : "Gemini API";
-        throw new Error(label + " error (HTTP " + response.status + ")" + (safeDetail ? ": " + safeDetail : ". Check your model and project settings."));
+        const result = await response.json() as GeminiResponse;
+        const answer = result.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+        if (answer) return { answer, model };
+        lastError = `Gemini model ${model} returned no usable answer.`;
+      } catch (error) {
+        if (controller.signal.aborted) {
+          lastError = `Gemini model ${model} timed out.`;
+          continue;
+        }
+        throw error;
+      } finally {
+        clearTimeout(timer);
       }
-      const result = await response.json() as {
-        status?: string;
-        steps?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
-      };
-      const answer = (result.steps || [])
-        .filter(step => step.type === "model_output")
-        .flatMap(step => step.content || [])
-        .filter(part => part.type === "text")
-        .map(part => part.text || "")
-        .join("")
-        .trim();
-      if (!answer) throw new Error("The AI did not return a usable answer. Please rephrase your question.");
-      return { answer, model };
-    } catch (error) {
-      if (controller.signal.aborted) {
-        throw new Error("Gemini took more than 50 seconds to respond. Try a shorter question or retry shortly.");
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeout);
     }
+    throw new Error(lastError + " Both available model attempts failed. Please try later.");
   });
