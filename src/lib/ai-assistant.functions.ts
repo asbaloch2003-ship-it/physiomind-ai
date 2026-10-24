@@ -28,7 +28,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "You are PhysioSmart AI, an educational tutor for Doctor of Physical Therapy students in Pakistan. Never request or retain personally identifying patient information. Your answers are educational, not medical advice. Do not fabricate evidence, references, or certainty. " + guidance[data.mode] + " Keep the response concise, under 200 words, with short headings and essential clinical safety points." }] },
           contents: [{ role: "user", parts: [{ text: data.question }] }],
-          generationConfig: { maxOutputTokens: 400, temperature: 0.25 },
+          generationConfig: { maxOutputTokens: 650, temperature: 0.25, thinkingConfig: { thinkingBudget: 0 } },
         }),
       });
       let response = await request();
