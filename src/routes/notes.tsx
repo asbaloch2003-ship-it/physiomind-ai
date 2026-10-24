@@ -65,11 +65,22 @@ function topicsFor(id:string) {
   return key?outlines[key]:["Introduction","Core concepts","Important principles","Practical applications","Revision"];
 }
 function NotesText({value}:{value:string}) {
-  return <div className="space-y-3 text-sm leading-7">{value.replace(/\s+#{2,4}\s+/g,"\n### ").split("\n").filter(Boolean).map((line,i)=>{
-    const s=line.trim();
-    if(s.startsWith("### "))return <h3 key={i} className="mt-4 border-b pb-2 text-base font-bold">{s.slice(4)}</h3>;
-    return <p key={i}>{s.split(/(\*\*[^*]+\*\*)/g).map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j}>{part.slice(2,-2)}</strong>:part)}</p>;
-  })}</div>;
+  const normalized=value.replace(/\r/g,"").replace(/\s+(#{1,4})\s+/g,"\n$1 ").replace(/\s+\*\s+(?=\*\*|[A-Z])/g,"\n- ");
+  const lines=normalized.split("\n").map(s=>s.trim()).filter(Boolean);
+  function inline(s:string) {
+    return s.split(/(\*\*[^*]+\*\*)/g).map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j} className="font-semibold text-foreground">{part.slice(2,-2)}</strong>:part);
+  }
+  return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
+    {lines.map((line,i)=>{
+      const heading=line.match(/^#{1,4}\s+(.+)$/);
+      if(heading)return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{heading[1]}</h3>;
+      const simpleHeading=/^(Definition|Key Concepts|Easy Explanation|Example|Clinical Relevance|Quick Revision(?: Points)?|Viva Questions(?: with Answers)?|Summary|Important Points|Clinical Example|Key Takeaways)\s*:?$/i;
+      if(simpleHeading.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
+      if(/^[-*•]\s+/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span aria-hidden="true" className="font-bold text-primary">•</span><p className="min-w-0">{inline(line.replace(/^[-*•]\s+/,""))}</p></div>;
+      if(/^\d+[.)]\s+/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span className="shrink-0 font-semibold text-primary">{line.match(/^\d+[.)]/)?.[0]}</span><p>{inline(line.replace(/^\d+[.)]\s+/,""))}</p></div>;
+      return <p key={i}>{inline(line)}</p>;
+    })}
+  </article>;
 }
 function Page(){
   const search=Route.useSearch();
