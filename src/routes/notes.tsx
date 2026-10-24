@@ -68,16 +68,17 @@ function NotesText({value}:{value:string}) {
   const normalized=value.replace(/\r/g,"").replace(/\s+(#{1,4})\s+/g,"\n$1 ").replace(/\s+\*\s+(?=\*\*|[A-Z])/g,"\n- ");
   const lines=normalized.split("\n").map(s=>s.trim()).filter(Boolean);
   function inline(s:string) {
-    return s.split(/(\*\*[^*]+\*\*)/g).map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j} className="font-semibold text-foreground">{part.slice(2,-2)}</strong>:part);
+    return s.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((part,j)=>part.startsWith("**")&&part.endsWith("**")?<strong key={j} className="font-semibold text-foreground">{part.slice(2,-2)}</strong>:part.startsWith("*")&&part.endsWith("*")?<em key={j}>{part.slice(1,-1)}</em>:part);
   }
   return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
-    {lines.map((line,i)=>{
-      const heading=line.match(/^#{1,4}\s+(.+)$/);
-      if(heading)return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{heading[1]}</h3>;
-      const simpleHeading=/^(Definition|Key Concepts|Easy Explanation|Example|Clinical Relevance|Quick Revision(?: Points)?|Viva Questions(?: with Answers)?|Summary|Important Points|Clinical Example|Key Takeaways)\s*:?$/i;
-      if(simpleHeading.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
-      if(/^[-*•]\s+/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span aria-hidden="true" className="font-bold text-primary">•</span><p className="min-w-0">{inline(line.replace(/^[-*•]\s+/,""))}</p></div>;
+    {lines.map((raw,i)=>{
+      const line=raw.replace(/^\\?\*\s*(?=\*\*|[A-Za-z])/,"- ");
+      const heading=line.match(/^#{1,6}\s+(.+)$/);
+      if(heading)return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{inline(heading[1])}</h3>;
+      if(/^\*\*[^*]+\*\*:?$/.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{inline(line.replace(/:$/,""))}</h3>;
+      if(/^[-*•]\s*/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span aria-hidden="true" className="font-bold text-primary">•</span><p className="min-w-0">{inline(line.replace(/^[-*•]\s*/,""))}</p></div>;
       if(/^\d+[.)]\s+/.test(line))return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span className="shrink-0 font-semibold text-primary">{line.match(/^\d+[.)]/)?.[0]}</span><p>{inline(line.replace(/^\d+[.)]\s+/,""))}</p></div>;
+      if(/^(Definition|Key Concepts|Easy Explanation|Example|Clinical Relevance|Quick Revision|Viva Questions|Summary|Classification|Origin|Insertion|Nerve Supply|Actions|Functions|Anatomical Location)\s*:?$/i.test(line))return <h3 key={i} className="mt-7 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
       return <p key={i}>{inline(line)}</p>;
     })}
   </article>;
@@ -97,8 +98,8 @@ function Page(){
     if(!course||t.trim().length<3||busy)return;
     setBusy(true);setError("");setAnswer("");setTopic(t);
     try{
-      const question="Write simple DPT student revision notes for Semester "+course.semester+", subject "+course.name+", topic "+t+". Organize with headings: Definition, Key Concepts, Easy Explanation, Example, Clinical Relevance if applicable, Quick Revision, and Two Viva Questions with answers. Keep explanations accurate, clear and student-friendly. Do not fabricate citations.";
-      const result=await ask({data:{mode:"study",question}});
+      const question="Write comprehensive but simple textbook-style DPT revision notes for Semester "+course.semester+", subject "+course.name+", topic "+t+". Explain the topic fully and systematically, not only its definition. Cover all important subtopics, classifications, mechanisms, real examples, clinical applications, and 3 viva questions with answers. For anatomy or muscles: identify the anatomical region and provide individual important muscles with their position/location, origin, insertion, nerve supply and function/action, organized by anatomical group. If the requested topic is broad, explain key groups in depth and state which regions should be studied next rather than falsely claiming to cover every muscle in one answer. Use clear Markdown headings, bullets and numbered points; no unsupported citations.";
+      const result=await ask({data:{mode:"notes",question}});
       setAnswer(result.answer);
     }catch(e){setError(e instanceof Error?e.message:"Could not generate notes.");}
     finally{setBusy(false);}
