@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { enforceAiRateLimit } from "./ai-rate-limit";
 
 const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.number().int().min(3).max(5) });
 const Question = z.object({
@@ -13,6 +14,7 @@ type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }) => {
+    enforceAiRateLimit("bcqs", 12);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured.");
     const preferred = process.env.GEMINI_MODEL || "gemini-3.8-flash";
