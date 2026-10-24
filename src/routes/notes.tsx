@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { GraduationCap } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, Container, PageHeader, Tag, meta } from "@/components/site";
 import { SourceReference, StudyFilters } from "@/components/curriculum-controls";
 import { getCourse } from "@/lib/curriculum";
@@ -19,6 +19,9 @@ function Page() {
   const list = filterMaterials(semester, subject);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [reviewed, setReviewed] = useState<Record<string, boolean>>({});
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { try { const saved = localStorage.getItem("physiosmart-reviewed-notes"); if (saved) setReviewed(JSON.parse(saved)); } catch {} setLoaded(true); }, []);
+  useEffect(() => { if (loaded) try { localStorage.setItem("physiosmart-reviewed-notes", JSON.stringify(reviewed)); } catch {} }, [reviewed, loaded]);
   return (
     <>
       <PageHeader eyebrow="Study material" title="Notes & Viva Prep" desc="One revision note and one viva prompt for every course in the uploaded HEC DPT study scheme." />
@@ -45,7 +48,7 @@ function Page() {
                   <p className="text-sm"><span className="font-semibold">Viva prompt:</span> {m.viva}</p>
                 </div>}
                 <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={!!reviewed[m.courseId]} onChange={e => setReviewed(prev => ({...prev, [m.courseId]: e.target.checked}))} /> Mark as reviewed</label>
-                <a className="mt-3 inline-block text-sm font-semibold text-primary underline" href={"/ai-assistant?source=notes"}>Ask AI to explain this topic →</a>
+                <a className="mt-3 inline-block text-sm font-semibold text-primary underline" href="/ai-assistant">Ask AI to explain this topic →</a>
               </Card>
             );
           })}
