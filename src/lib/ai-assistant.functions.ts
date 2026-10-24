@@ -49,8 +49,8 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         const safeDetail = detail
           .replaceAll(key, "[REDACTED]")
           .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]")
-          .replace(/https?:\\/\\/\\S+/g, "[URL]")
-          .replace(/[\\r\\n\\t]+/g, " ")
+          .replace(new RegExp("https?://[^ ]+", "g"), "[URL]")
+          .replace(new RegExp("[\\r\\n\\t]+", "g"), " ")
           .slice(0, 450);
         const label = response.status === 429 ? "Gemini free-tier quota"
           : response.status === 401 || response.status === 403 ? "Gemini API access"
