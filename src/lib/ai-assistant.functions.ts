@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const Input = z.object({
-  mode: z.enum(["clinical", "study", "quiz"]),
+  mode: z.enum(["clinical", "study", "quiz", "notes"]),
   question: z.string().trim().min(8).max(4000),
 });
 
@@ -10,6 +10,7 @@ const guidance = {
   clinical: "For a fictional physiotherapy case, briefly cover red flags, relevant history, assessments, possible explanations, and safe rehabilitation principles. Never diagnose a real patient or fabricate citations.",
   study: "Explain the physiotherapy concept clearly, with a practical example and key takeaway.",
   quiz: "Explain the correct physiotherapy reasoning, and why alternatives might be wrong when options are provided.",
+  notes: "Create thorough yet easy-to-understand DPT textbook-style topic notes (roughly 500-900 words when appropriate). Cover the requested topic systematically with meaningful subtopics, examples, tables as lists where useful, practical clinical relevance and viva questions. For muscle topics, identify the anatomical region and cover major individual muscles, their anatomical location, origin, insertion, nerve supply and actions, grouped logically. Do not claim to list every muscle of the body in one response; offer to cover the next region. Do not invent anatomy. Format with Markdown headings and bullet lists.",
 };
 
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
@@ -23,7 +24,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
-    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate and concise (100-200 words). " + guidance[data.mode];
+    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + (data.mode === "notes" ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     for (const model of models) {
@@ -39,7 +40,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: prompt }] },
               contents: [{ role: "user", parts: [{ text: data.question }] }],
-              generationConfig: { maxOutputTokens: 1200 },
+              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : 1200 },
             }),
           },
         );
