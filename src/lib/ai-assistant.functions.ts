@@ -19,18 +19,23 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
     if (!/^[a-zA-Z0-9._-]+$/.test(model)) throw new Error("Invalid AI model configuration.");
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 50000);
+    const timeout = setTimeout(() => controller.abort(), 45000);
     try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      const request = () => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: "You are PhysioSmart AI, an educational tutor for Doctor of Physical Therapy students in Pakistan. Never request or retain personally identifying patient information. Your answers are educational, not medical advice. Do not fabricate evidence, references, or certainty. " + guidance[data.mode] }] },
           contents: [{ role: "user", parts: [{ text: data.question }] }],
-          generationConfig: { maxOutputTokens: 1300, temperature: 0.35 },
+          generationConfig: { maxOutputTokens: 750, temperature: 0.35 },
         }),
       });
+      let response = await request();
+      if (response.status === 503 && !controller.signal.aborted) {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        response = await request();
+      }
       if (!response.ok) {
         // Google's structured error message explains which model, API version, or
         // project permission failed. Never expose raw responses or credentials.
@@ -64,7 +69,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
       return { answer, model };
     } catch (error) {
       if (controller.signal.aborted) {
-        throw new Error("Gemini took more than 50 seconds to respond. Try a shorter question or retry shortly.");
+        throw new Error("Gemini took more than 45 seconds to respond. Try a shorter question or retry shortly.");
       }
       throw error;
     } finally {
