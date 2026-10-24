@@ -11,6 +11,7 @@ const nav = [
   { to: "/quizzes", label: "BCQs" },
   { to: "/notes", label: "Notes" },
   { to: "/about", label: "About" },
+  { to: "/feedback", label: "Feedback" },
 ] as const;
 
 
