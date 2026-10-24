@@ -16,8 +16,27 @@ const modes: { value: Mode; label: string; example: string }[] = [
   { value: "study", label: "Study tutor", example: "Explain the gait cycle phases and the role of major lower limb muscles in simple language for a DPT student." },
   { value: "quiz", label: "Quiz explanations", example: "In a BCQ about the Trendelenburg sign, why does pelvic drop suggest hip abductor weakness? Explain common distractors." },
 ];
+function InlineAnswer({ text }: { text: string }) {
+  return <>{text.split(/(\\*\\*[^*]+\\*\\*)/g).map((part, i) =>
+    part.startsWith("**") && part.endsWith("**")
+      ? <strong key={i}>{part.slice(2, -2)}</strong>
+      : <span key={i}>{part}</span>
+  )}</>;
+}
 function FormattedAnswer({ text }: { text: string }) {
-  return <div className="whitespace-pre-wrap text-sm leading-7">{text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i}>{part.slice(2, -2)}</strong> : <span key={i}>{part}</span>)}</div>;
+  return <div className="space-y-2 text-sm leading-7">
+    {text.split(/\\r?\\n/).map((raw, i) => {
+      const line = raw.trim();
+      if (!line) return <div key={i} className="h-2" aria-hidden="true" />;
+      const heading = line.match(/^#{1,4}\\s+(.+)$/);
+      if (heading) return <h3 key={i} className="pt-3 text-base font-bold"><InlineAnswer text={heading[1]} /></h3>;
+      const bullet = line.match(/^[-*•]\\s+(.+)$/);
+      if (bullet) return <p key={i} className="pl-4"><span className="mr-2 text-primary">•</span><InlineAnswer text={bullet[1]} /></p>;
+      const numbered = line.match(/^(\\d+[.)])\\s+(.+)$/);
+      if (numbered) return <p key={i} className="pl-4"><span className="mr-2 font-semibold">{numbered[1]}</span><InlineAnswer text={numbered[2]} /></p>;
+      return <p key={i}><InlineAnswer text={line} /></p>;
+    })}
+  </div>;
 }
 function Page() {
   const [mode, setMode] = useState<Mode>("clinical");
