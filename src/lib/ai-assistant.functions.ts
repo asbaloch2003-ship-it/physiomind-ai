@@ -21,14 +21,15 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 50000);
     try {
-      const request = () => fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      const request = () => fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: "You are PhysioSmart AI, an educational tutor for Doctor of Physical Therapy students in Pakistan. Never request or retain personally identifying patient information. Your answers are educational, not medical advice. Do not fabricate evidence, references, or certainty. " + guidance[data.mode] + " Keep the response concise, under 200 words, with short headings and essential clinical safety points." }] },
-          contents: [{ role: "user", parts: [{ text: data.question }] }],
-          generationConfig: { maxOutputTokens: 650, temperature: 0.25, thinkingConfig: { thinkingBudget: 0 } },
+          model,
+          input: "You are PhysioSmart AI, an educational tutor for Doctor of Physical Therapy students in Pakistan. Never request or retain identifying patient information. Your answer is educational, not medical advice. Do not fabricate references or certainty. " + guidance[data.mode] + "\n\nStudent question: " + data.question,
+          generation_config: { max_output_tokens: 900, thinking_level: "low" },
+          store: false,
         }),
       });
       let response = await request();
@@ -63,8 +64,17 @@ export const askPhysioAI = createServerFn({ method: "POST" })
           : "Gemini API";
         throw new Error(label + " error (HTTP " + response.status + ")" + (safeDetail ? ": " + safeDetail : ". Check your model and project settings."));
       }
-      const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-      const answer = result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
+      const result = await response.json() as {
+        status?: string;
+        steps?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
+      };
+      const answer = (result.steps || [])
+        .filter(step => step.type === "model_output")
+        .flatMap(step => step.content || [])
+        .filter(part => part.type === "text")
+        .map(part => part.text || "")
+        .join("")
+        .trim();
       if (!answer) throw new Error("The AI did not return a usable answer. Please rephrase your question.");
       return { answer, model };
     } catch (error) {
