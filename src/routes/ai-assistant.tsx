@@ -29,13 +29,16 @@ function InlineAnswer({ text }: { text: string }) {
 }
 function FormattedAnswer({ text }: { text: string }) {
   const normalized = text.replace(/\r\n?/g,"\n")
+    .replace(/\\\*/g,"*")
+    .replace(/^[ \t]*(?:\*\*\s*[•-]\s*\*\*|[•*-])[ \t]*$/gm,"")
+    .replace(/^[ \t]*\*\*\s*[•-]\s*\*\*[ \t]*/gm,"- ")
     .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*$/gm,"$1")
     .replace(/^\s*\*\*\s*([•-])\s*\*\*\s*/gm,"$1 ")
     .replace(/^\s*\*\*([^*]+)\*\*\s*$/gm,"**$1**")
     .replace(/[ \t]+(#{1,4})[ \t]+/g,"\n\n$1 ")
     .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g,"$1\n$2")
     .replace(/\n{3,}/g,"\n\n");
-  const lines=normalized.split("\n");
+  const lines=normalized.split("\n").filter(line=>!/^\s*(?:\*\*\s*[•-]\s*\*\*|[•*-])?\s*$/.test(line));
   return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
     {lines.map((raw,i)=>{
       const line=raw.trim();
