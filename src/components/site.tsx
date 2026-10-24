@@ -4,6 +4,7 @@ import { Menu, X, ShieldAlert, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const nav = [
+  { to: "/study", label: "Study" },
   { to: "/curriculum", label: "Curriculum" },
   { to: "/special-tests", label: "Special Tests" },
   { to: "/ai-assistant", label: "AI Assistant" },
