@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Header, Footer } from "../components/site";
+import { PwaRegister } from "../components/pwa-register";
 import { StudentSessionProvider } from "@/components/student-session";
 
 function NotFoundComponent() {
@@ -48,6 +49,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#0646c9" },
       { title: "PhysioSmart AI" },
       { name: "description", content: "Learn to think like a physiotherapist. AI-powered learning and clinical reasoning for DPT students in Pakistan." },
       { property: "og:type", content: "website" },
@@ -58,6 +60,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" },
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
     ],
   }),
   shellComponent: RootShell,
@@ -80,6 +83,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <StudentSessionProvider>
+      <PwaRegister />
       <Header />
       <main><Outlet /></main>
       <Footer />
