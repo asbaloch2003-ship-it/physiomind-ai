@@ -17,6 +17,7 @@ function Page() {
   const [selected, setSelected] = useState("");
   const [showAnswer, setShowAnswer] = useState(false);
   const [topic, setTopic] = useState(0);
+  const [customTopic, setCustomTopic] = useState("");
   const filtered = courses.filter(c => semester === "all" || c.semester === Number(semester));
   const course = courses.find(c => c.id === selected);
   const outline = course ? courseOutlines[course.id] : undefined;
@@ -24,6 +25,7 @@ function Page() {
   const topics = outline?.topics || [];
   const activeTopic = topics[topic];
   const prompt = activeTopic ? `Explain ${activeTopic} in the context of ${course?.name} for a DPT student. Give key concepts, a clinical example, and a self-test question.` : `Teach me ${course?.name || "physiotherapy"} with a clinical example and self-test question.`;
+  const tutorSearch = (t: string) => ({topic:t,subject:course?.name || "",semester:String(course?.semester || ""),auto:"1"});
   return <>
     <PageHeader eyebrow="Learn • Recall • Apply" title="Interactive DPT Study" desc="Select your semester and subject, explore curriculum topics, test your recall, and ask Gemini for deeper explanations. No login required." />
     <Container>
@@ -43,15 +45,16 @@ function Page() {
           <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">{course.name}</h2><Tag>Semester {course.semester}</Tag></div>
           <p className="mt-3 text-sm text-muted-foreground">{topics.length} curriculum topics available</p>
           {topics.length > 0 ? <div className="mt-5 max-h-[540px] space-y-2 overflow-y-auto">
-            {topics.map((t,i) => <button key={i} onClick={() => { setTopic(i); setShowAnswer(false); }} className={`block w-full rounded-lg border px-3 py-3 text-left text-sm transition ${i === topic ? "border-primary bg-primary-soft font-semibold text-primary" : "hover:bg-secondary"}`}>{i+1}. {t}</button>)}
-          </div> : <p className="mt-4 text-sm">A detailed topic outline is not available for this course yet.</p>}
+            {topics.map((t,i) => <Link key={i} to="/ai-assistant" search={tutorSearch(t)} className="block w-full rounded-lg border px-3 py-3 text-left text-sm transition hover:border-primary hover:bg-secondary">{i+1}. {t} →</Link>)}
+          </div> : <p className="mt-4 text-sm">Enter your own topic below.</p>}
+          <div className="mt-5 border-t pt-4"><label htmlFor="custom-study-topic" className="text-sm font-semibold">Study another topic</label><input id="custom-study-topic" value={customTopic} onChange={e=>setCustomTopic(e.target.value)} maxLength={180} placeholder="Type any topic from this subject" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 text-sm"/>{customTopic.trim().length>=3&&<Link to="/ai-assistant" search={tutorSearch(customTopic.trim())} className="mt-3 inline-flex rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Study with AI →</Link>}</div>
         </Card>
         <div className="space-y-5">
           <Card>
             <p className="text-xs font-semibold uppercase tracking-wide text-accent">Current learning topic</p>
             <h2 className="mt-2 text-xl font-bold">{activeTopic || course.name}</h2>
             <p className="mt-4 text-sm leading-7 text-muted-foreground">{material?.note || "Review this topic in your course resources, then use the AI tutor to explore its concepts and clinical relevance."}</p>
-            <Link to="/ai-assistant" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"><BrainCircuit className="h-4 w-4" /> Open AI Study Tutor <ArrowRight className="h-4 w-4" /></Link>
+            <Link to="/ai-assistant" search={tutorSearch(activeTopic || course.name)} className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground"><BrainCircuit className="h-4 w-4" /> Open AI Study Tutor <ArrowRight className="h-4 w-4" /></Link>
             <p className="mt-3 text-xs text-muted-foreground">Suggested question to copy into AI:</p>
             <div className="mt-2 rounded-lg bg-secondary p-3 text-sm">{prompt}</div>
             <button className="mt-2 text-sm font-semibold text-primary underline" onClick={() => navigator.clipboard?.writeText(prompt)}>Copy suggested question</button>
