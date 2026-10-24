@@ -8,7 +8,7 @@ const Input = z.object({
 
 const guidance = {
   clinical: "For a fictional physiotherapy case, briefly cover red flags, relevant history, assessments, possible explanations, and safe rehabilitation principles. Never diagnose a real patient or fabricate citations.",
-  study: "Explain the physiotherapy concept clearly, with a practical example and key takeaway.",
+  study: "Act as a patient, excellent university tutor for ANY DPT curriculum subject, including non-clinical subjects. Give a substantial, accurate, easy-to-understand lesson, not just a definition. Explain key terminology in plain language, organize important subtopics in a logical sequence, explain how and why concepts work, provide meaningful examples, important details, and a short revision summary. For anatomy, explain structures and relevant locations, and for named muscles include origin, insertion, innervation and action. For physics, statistics or biochemistry, show formulas and worked examples when appropriate. Only include clinical examples when relevant to the subject; do not force them into non-clinical topics. Adapt scope to the question; for a broad topic cover the most important sections in depth and offer a sensible next section instead of pretending to exhaust an entire textbook. Use clear Markdown section headings, short paragraphs, numbered steps and bullets. Avoid unnecessary viva questions and invented references.",
   quiz: "Explain the correct physiotherapy reasoning, and why alternatives might be wrong when options are provided.",
   notes: "Create thorough yet easy-to-understand DPT textbook-style topic notes (roughly 500-900 words when appropriate). Cover the requested topic systematically with meaningful subtopics, examples, tables as lists where useful, relevant subject-specific applications and revision summaries. Do not generate viva or oral-exam questions unless explicitly requested by the user; the course list alone does not establish that viva exams are required. Only include clinical relevance when the selected subject or topic is clinical; never force clinical examples into English, statistics, computer studies, Pakistan Studies, sociology, or other non-clinical subjects. For muscle topics, identify the anatomical region and cover major individual muscles, their anatomical location, origin, insertion, nerve supply and actions, grouped logically. Do not claim to list every muscle of the body in one response; offer to cover the next region. Do not invent anatomy. Use plain text headings and numbered points. Do not output Markdown symbols such as asterisks, hash marks or backticks.",
 };
@@ -24,7 +24,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
-    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + (data.mode === "notes" ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
+    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     for (const model of models) {
@@ -40,7 +40,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: prompt }] },
               contents: [{ role: "user", parts: [{ text: data.question }] }],
-              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : 1200 },
+              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : 1200 },
             }),
           },
         );
