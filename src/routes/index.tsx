@@ -10,7 +10,7 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: BookOpen, label: "LEARN", title: "Complete DPT Learning", desc: "Choose your semester, subject and topic. Learn through simple explanations, clinical examples, notes, BCQs and viva questions.", to: "/curriculum", link: "Explore the curriculum" },
+  { icon: BookOpen, label: "LEARN", title: "Complete DPT Learning", desc: "Choose your semester, subject and topic. Learn through simple explanations, clinical examples, notes, BCQs and viva questions.", to: "/study", link: "Start interactive study" },
   { icon: Stethoscope, label: "ASSESS", title: "Physiotherapy Special Tests", desc: "Explore special tests with purpose, patient position, procedure, positive findings, interpretation and visual explanations.", to: "/special-tests", link: "Explore special tests" },
   { icon: BrainCircuit, label: "THINK", title: "AI Clinical Reasoning", desc: "Enter a fictional patient case and receive an educational clinical reasoning pathway including relevant assessments, possible differential diagnoses, intervention options, outcome measures and prognostic considerations.", to: "/ai-assistant", link: "Ask AI about a clinical case" },
 ] as const;
@@ -44,7 +44,7 @@ function Index() {
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground">PhysioSmart AI brings the DPT curriculum, easy-to-understand notes, BCQs, viva preparation, special tests and AI-assisted clinical reasoning into one structured learning platform.</p>
             <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild className="h-auto min-h-12 whitespace-normal px-5 py-3"><Link to="/curriculum">Explore DPT Curriculum<ArrowRight /></Link></Button>
+              <Button asChild className="h-auto min-h-12 whitespace-normal px-5 py-3"><Link to="/study">Start Learning<ArrowRight /></Link></Button>
               <Button asChild variant="outline" className="h-auto min-h-12 whitespace-normal border-primary/30 bg-card px-5 py-3 text-primary hover:bg-primary-soft hover:text-primary"><Link to="/ai-assistant">Practice AI Clinical Cases</Link></Button>
             </div>
             <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-muted-foreground">
@@ -101,7 +101,7 @@ function Index() {
       <section className="homepage-cta border-y bg-primary text-primary-foreground">
         <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-6 px-5 py-12 sm:px-8 lg:flex-row lg:items-center">
           <div><p className="mb-3 text-xs font-semibold uppercase tracking-widest text-primary-foreground/70">Your next step starts here</p><h2 className="max-w-xl text-2xl font-bold leading-snug sm:text-3xl">Start Your Physiotherapy Learning Journey</h2></div>
-          <Button asChild variant="secondary" className="h-auto min-h-12 whitespace-normal bg-card px-6 py-3 text-primary hover:bg-primary-soft"><Link to="/curriculum">Explore PhysioSmart AI<ArrowRight /></Link></Button>
+          <Button asChild variant="secondary" className="h-auto min-h-12 whitespace-normal bg-card px-6 py-3 text-primary hover:bg-primary-soft"><Link to="/study">Explore PhysioSmart AI<ArrowRight /></Link></Button>
         </div>
       </section>
     </>
