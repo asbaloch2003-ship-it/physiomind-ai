@@ -93,6 +93,38 @@ function PosterPanel({name}:{name:string}) {
   </figure>;
 }
 
+const neuroPosterIndex: Record<string, number> = {
+  "Upper Limb Neurodynamic Test 1 (ULNT1 — Median Bias)": 0,
+  "Upper Limb Neurodynamic Test 2A (ULNT2A — Median Bias)": 1,
+  "Upper Limb Neurodynamic Test 2B (ULNT2B — Radial Bias)": 2,
+  "Upper Limb Neurodynamic Test 3 (ULNT3 — Ulnar Bias)": 3,
+  "Slump Test": 4,
+  "Straight Leg Raise with Structural Differentiation": 5,
+  "Crossed Straight Leg Raise": 6,
+  "Prone Knee Bend / Femoral Nerve Stretch": 7,
+  "Seated Knee Extension Neurodynamic Screen": 8,
+};
+function NeurodynamicPoster({name}:{name:string}) {
+  const index = neuroPosterIndex[name];
+  if (index === undefined) return null;
+  const top = index < 4;
+  const column = top ? index : index - 4;
+  const columns = top ? 4 : 5;
+  return <figure className="overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div className="border-b bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900">{name} — illustrated reference</div>
+    <div role="img" aria-label={name+" AI-generated infographic panel showing illustrated sitting and lying variations and positive and negative findings"}
+      className="w-full"
+      style={{
+        aspectRatio: top ? "0.78" : "0.67",
+        backgroundImage: "url('/neurodynamic-tests.png.png')",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: (columns*100)+"% 200%",
+        backgroundPosition: (column*100/(columns-1))+"% "+(top?"0%":"100%"),
+      }}/>
+    <figcaption className="px-4 py-3 text-xs leading-5 text-slate-600">AI-generated poster, not a validated clinical demonstration. Some illustrated sitting or lying variants may not be standard, and anatomy, labels or positive/negative findings may be incorrect. Follow the written procedure below and qualified clinical instruction.</figcaption>
+  </figure>;
+}
+
 function Page() {
   const [region,setRegion]=useState("All");
   const [opened,setOpened]=useState<string|null>(null);
@@ -105,7 +137,7 @@ function Page() {
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-1 text-sm text-muted-foreground">{t.purpose}</p></div><Tag>{t.region}</Tag></div>
         <button type="button" aria-expanded={opened===t.name} onClick={()=>setOpened(opened===t.name?null:t.name)} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-left text-sm font-semibold text-primary-foreground">{opened===t.name?"− Close detailed guide":"+ Open detailed guide"}</button>
         {opened===t.name&&<div className="mt-5 space-y-4 text-sm leading-6">
-          {t.region === "Neurodynamic" ? <div className="rounded-xl border bg-secondary/40 p-4 text-sm leading-6"><strong>Clinical positioning guide</strong><p className="mt-2">Use the patient position, therapist position and graded movement sequence below. No verified test-specific image is available yet; do not substitute another test’s photograph.</p></div> : <PosterPanel name={t.name}/> }
+          {t.region === "Neurodynamic" ? <NeurodynamicPoster name={t.name}/> : <PosterPanel name={t.name}/> }
           <div><h3 className="font-bold text-primary">Patient position</h3><p>{t.patient}</p></div>
           <div><h3 className="font-bold text-primary">Physiotherapist position and hand placement</h3><p>{t.therapist}</p></div>
           <div><h3 className="font-bold text-primary">Step-by-step procedure</h3><ol className="mt-2 list-inside list-decimal space-y-2">{t.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></div>
