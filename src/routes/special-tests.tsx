@@ -125,6 +125,63 @@ function NeurodynamicPoster({name}:{name:string}) {
   </figure>;
 }
 
+
+type PositionGuide = {label:string;status:string;patient:string;therapist:string;steps:string[]};
+const neuroPositions: Record<string,PositionGuide[]> = {
+  "Upper Limb Neurodynamic Test 1 (ULNT1 — Median Bias)": [
+    {label:"Lying on back (supine)",status:"Commonly taught standard",patient:"Lie supine with head supported, shoulder near the plinth edge and the tested arm relaxed.",therapist:"Stand beside the tested shoulder. Stabilize the shoulder girdle without force; use your other hand to support the forearm, wrist and fingers. Adjust your grip as the sequence progresses.",steps:["Gently stabilize the shoulder girdle and abduct the arm as tolerated.","Externally rotate the shoulder and supinate the forearm.","Extend wrist and fingers, then gradually extend the elbow while monitoring symptoms.","Compare cervical side-bending toward and away from the tested arm as structural differentiation."]},
+    {label:"Sitting upright",status:"Modified alternative; not interchangeable with supine norms",patient:"Sit supported with feet flat and trunk upright, keeping the neck relaxed and tested arm free to move.",therapist:"Stand beside or slightly behind the patient; support the shoulder and arm to prevent unwanted trunk or scapular movement.",steps:["Establish baseline symptoms and gently position the shoulder in abduction and external rotation.","Supinate the forearm and extend wrist and fingers.","Progress elbow extension within comfort.","Use gentle neck side-bending to see whether familiar symptoms change."]}
+  ],
+  "Upper Limb Neurodynamic Test 2A (ULNT2A — Median Bias)": [
+    {label:"Lying on back (supine)",status:"Commonly taught standard",patient:"Lie supine close enough to the table edge for the tested arm to move comfortably; support the head.",therapist:"Stand at the tested side, one hand controlling the shoulder girdle and the other supporting the forearm or wrist.",steps:["Gently stabilize/depress the shoulder girdle as tolerated.","Extend the elbow, externally rotate the shoulder and supinate the forearm.","Extend wrist and fingers.","Gradually abduct the shoulder, then compare symptoms with gentle neck side-bending."]},
+    {label:"Sitting upright",status:"Modified alternative",patient:"Sit upright with feet supported and tested arm relaxed by the side.",therapist:"Stand alongside, maintaining control of the shoulder and distal arm without traction.",steps:["Record baseline symptoms and stabilize the shoulder girdle.","Extend the elbow and gradually externally rotate the shoulder with forearm supination.","Extend wrist and fingers.","Progress shoulder abduction and use neck movement for differentiation."]}
+  ],
+  "Upper Limb Neurodynamic Test 2B (ULNT2B — Radial Bias)": [
+    {label:"Lying on back (supine)",status:"Commonly taught standard",patient:"Lie supine with head supported and the tested arm close to the table edge.",therapist:"Stand at the tested side; control the shoulder girdle and guide the elbow, forearm and wrist.",steps:["Gently stabilize/depress the shoulder girdle.","Extend the elbow and internally rotate the shoulder.","Pronate the forearm and flex wrist, fingers and thumb with ulnar deviation as tolerated.","Gradually abduct the shoulder; use gentle cervical side-bending to differentiate symptoms."]},
+    {label:"Sitting upright",status:"Modified alternative",patient:"Sit with feet supported and trunk upright, tested arm relaxed.",therapist:"Stand at the side, supporting the arm and avoiding excessive shoulder traction.",steps:["Stabilize the shoulder and extend the elbow.","Internally rotate the shoulder and pronate the forearm.","Gently flex the wrist and fingers with ulnar deviation.","Add tolerated shoulder abduction and gentle cervical differentiation."]}
+  ],
+  "Upper Limb Neurodynamic Test 3 (ULNT3 — Ulnar Bias)": [
+    {label:"Lying on back (supine)",status:"Commonly taught standard",patient:"Lie supine with head and arm supported, shoulder close to the table edge.",therapist:"Stand beside the tested shoulder, supporting the elbow and hand while guiding shoulder rotation.",steps:["Extend the wrist and fingers as tolerated.","Flex the elbow and externally rotate the shoulder.","Gradually abduct the shoulder, bringing the hand toward the side of the face without forcing it.","Use gentle cervical side-bending to assess change in familiar symptoms."]},
+    {label:"Sitting upright",status:"Modified alternative",patient:"Sit upright with feet supported and tested arm initially resting by the side.",therapist:"Stand beside the patient and support the forearm, wrist and shoulder.",steps:["Position the wrist and fingers in extension.","Gradually flex the elbow and externally rotate the shoulder.","Abduct the shoulder within tolerance, approaching the hand toward the ear.","Compare symptom response with gentle neck side-bending."]}
+  ],
+  "Slump Test": [
+    {label:"Sitting at the plinth edge",status:"Standard seated test",patient:"Sit near the edge of the plinth, thighs supported, feet able to move freely and hands comfortably behind the back if possible.",therapist:"Stand alongside to guard balance, observe spine and leg movement, and guide the sequence without pressing forcefully on the neck.",steps:["Record baseline symptoms and ask the patient to slump through thoracic and lumbar spine.","Add gentle cervical flexion.","Extend one knee, then dorsiflex the ankle within tolerance.","Release cervical flexion or ankle dorsiflexion to see whether familiar leg symptoms change."]},
+    {label:"Lying on back (supine)",status:"Related assessment: straight leg raise, not a supine Slump Test",patient:"Lie supine with pelvis level and legs relaxed.",therapist:"Stand beside the leg being assessed and support the heel and knee.",steps:["Use the separate Straight Leg Raise with Structural Differentiation guide.","Raise the straight leg slowly and note symptom location.","Use ankle movement to assess symptom change.","Do not label this procedure a lying Slump Test."]}
+  ],
+  "Straight Leg Raise with Structural Differentiation": [
+    {label:"Lying on back (supine)",status:"Standard position",patient:"Lie supine with both legs relaxed, pelvis neutral and head supported.",therapist:"Stand beside the tested leg, supporting the heel and keeping the knee comfortably extended.",steps:["Raise the straight leg slowly by flexing the hip.","Record angle and distribution of familiar symptoms.","Hold the hip position steady and gently add or release ankle dorsiflexion.","Compare both sides and distinguish neural symptoms from hamstring stretch."]},
+    {label:"Sitting upright",status:"Related seated knee-extension screen; not standard SLR",patient:"Sit upright with hips flexed and feet supported initially.",therapist:"Stand or sit beside the patient and observe posture, knee extension and ankle movement.",steps:["Use the separate Seated Knee Extension Neurodynamic Screen guide.","Extend the knee gently within tolerance.","Add or ease ankle dorsiflexion to assess symptom change.","Document this as a seated screen rather than a supine SLR."]}
+  ],
+  "Crossed Straight Leg Raise": [
+    {label:"Lying on back (supine)",status:"Standard position",patient:"Lie supine with both legs relaxed; identify the more symptomatic side first.",therapist:"Stand beside the less symptomatic leg, supporting the heel and knee.",steps:["Raise the less symptomatic leg with the knee extended.","Ask whether familiar radiating symptoms occur in the opposite, symptomatic leg.","Record symptom distribution and the approximate hip angle.","Stop at symptom reproduction; do not force additional range."]}
+  ],
+  "Prone Knee Bend / Femoral Nerve Stretch": [
+    {label:"Lying face down (prone)",status:"Commonly taught standard",patient:"Lie prone with pelvis supported and a small abdominal pillow if needed for comfort.",therapist:"Stand beside the tested leg, supporting the ankle while monitoring the pelvis and lumbar spine.",steps:["Gently flex the knee toward the buttock.","Observe whether familiar anterior-thigh symptoms occur, distinct from quadriceps stretch.","If appropriate, add a small amount of hip extension without forcing lumbar extension.","Ease the position and document symptom change and side-to-side differences."]},
+    {label:"Side-lying",status:"Modified alternative when prone is unsuitable",patient:"Lie on the side with the tested leg uppermost; support the head and trunk and flex the lower hip and knee for stability.",therapist:"Stand behind or beside the patient; stabilize the pelvis with one hand and support the upper leg at the knee or ankle with the other.",steps:["Keep the pelvis stable and gently extend the upper hip only as tolerated.","Gradually flex the upper knee while observing familiar anterior-thigh symptoms.","Ease knee flexion or hip extension to assess symptom change.","Document this as a modified femoral nerve bias assessment, not the standard prone test."]}
+  ],
+  "Seated Knee Extension Neurodynamic Screen": [
+    {label:"Sitting upright",status:"Standard position for this screen",patient:"Sit on a supported plinth or chair with hips and knees flexed and feet initially supported.",therapist:"Stand or sit beside the patient to observe knee movement and guard balance.",steps:["Record baseline symptoms with an upright trunk.","Extend one knee slowly.","Add or release ankle dorsiflexion if appropriate.","Compare symptom location and response on both sides."]},
+    {label:"Lying on back (supine)",status:"Related assessment: straight leg raise, not seated knee extension",patient:"Lie supine with legs relaxed.",therapist:"Stand beside the tested leg and support the heel and knee.",steps:["Use the separate Straight Leg Raise guide for supine neural assessment.","Raise the leg with knee extended and monitor symptoms.","Use ankle movement as a structural differentiator.","Document as SLR rather than seated knee extension."]}
+  ]
+};
+function NeurodynamicPositions({name}:{name:string}) {
+  const positions=neuroPositions[name]||[];
+  return <section className="space-y-4">
+    <div className="rounded-xl border bg-secondary/40 p-4">
+      <h3 className="text-base font-bold">Patient and physiotherapist positions</h3>
+      <p className="mt-1 text-sm text-muted-foreground">Choose the clinically appropriate position. Standard procedures and modified or related assessments are identified separately; they are not automatically equivalent.</p>
+    </div>
+    {positions.map((position,i)=><div key={i} className="rounded-xl border p-4 sm:p-5">
+      <div className="mb-4"><h4 className="text-base font-bold text-foreground">{position.label}</h4><p className="mt-1 text-xs font-semibold text-primary">{position.status}</p></div>
+      <div className="space-y-3">
+        <div><h5 className="font-semibold">Patient position</h5><p className="mt-1">{position.patient}</p></div>
+        <div><h5 className="font-semibold">Physiotherapist position and hand placement</h5><p className="mt-1">{position.therapist}</p></div>
+        <div><h5 className="font-semibold">Step-by-step procedure</h5><ol className="mt-2 list-outside list-decimal space-y-2 pl-5">{position.steps.map((step,j)=><li key={j}>{step}</li>)}</ol></div>
+      </div>
+    </div>)}
+  </section>;
+}
+
 function Page() {
   const [region,setRegion]=useState("All");
   const [opened,setOpened]=useState<string|null>(null);
@@ -137,10 +194,10 @@ function Page() {
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-1 text-sm text-muted-foreground">{t.purpose}</p></div><Tag>{t.region}</Tag></div>
         <button type="button" aria-expanded={opened===t.name} onClick={()=>setOpened(opened===t.name?null:t.name)} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-left text-sm font-semibold text-primary-foreground">{opened===t.name?"− Close detailed guide":"+ Open detailed guide"}</button>
         {opened===t.name&&<div className="mt-5 space-y-4 text-sm leading-6">
-          {t.region === "Neurodynamic" ? <NeurodynamicPoster name={t.name}/> : <PosterPanel name={t.name}/> }
-          <div><h3 className="font-bold text-primary">Patient position</h3><p>{t.patient}</p></div>
-          <div><h3 className="font-bold text-primary">Physiotherapist position and hand placement</h3><p>{t.therapist}</p></div>
-          <div><h3 className="font-bold text-primary">Step-by-step procedure</h3><ol className="mt-2 list-inside list-decimal space-y-2">{t.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></div>
+          {t.region === "Neurodynamic" ? <NeurodynamicPositions name={t.name}/> : <PosterPanel name={t.name}/> }
+          {t.region !== "Neurodynamic" && <div><h3 className="font-bold text-primary">Patient position</h3><p>{t.patient}</p></div>}
+          {t.region !== "Neurodynamic" && <div><h3 className="font-bold text-primary">Physiotherapist position and hand placement</h3><p>{t.therapist}</p></div>}
+          {t.region !== "Neurodynamic" && <div><h3 className="font-bold text-primary">Step-by-step procedure</h3><ol className="mt-2 list-inside list-decimal space-y-2">{t.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></div>}
           <div><h3 className="font-bold text-primary">Positive finding</h3><p>{t.positive}</p></div>
           <div><h3 className="font-bold text-primary">Clinical interpretation</h3><p>{t.meaning}</p></div>
           <div className="rounded-lg border border-warning/30 bg-warning-soft p-3"><h3 className="font-bold">Safety / precautions</h3><p>{t.caution}</p></div>
