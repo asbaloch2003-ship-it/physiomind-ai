@@ -18,40 +18,39 @@ const modes: { value: Mode; label: string; example: string }[] = [
   { value: "quiz", label: "Quiz explanations", example: "In a BCQ about the Trendelenburg sign, why does pelvic drop suggest hip abductor weakness? Explain common distractors." },
 ];
 function InlineAnswer({ text }: { text: string }) {
-  return <>{text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+  return <>{text.split(/(\*\*[^*]+\*\*|\*[^*\n]+\*)/g).map((part, i) =>
     part.startsWith("**") && part.endsWith("**")
       ? <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
-      : <span key={i}>{part}</span>
+      : part.startsWith("*") && part.endsWith("*")
+        ? <em key={i}>{part.slice(1,-1)}</em>
+        : <span key={i}>{part}</span>
   )}</>;
 }
-
 function FormattedAnswer({ text }: { text: string }) {
-  // Some Gemini responses omit line breaks before headings or numbered items.
-  // Normalize those separators before rendering; never interpret AI output as HTML.
-  const normalized = text
-    .replace(/\r\n?/g, "\n")
-    .replace(/[ \t]*#{2,4}[ \t]*/g, "\n\n### ")
-    .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g, "$1\n$2")
-    .replace(/([.!?])\s+([*•-]\s+\*\*)/g, "$1\n$2")
-    .replace(/\n{3,}/g, "\n\n");
-  return <div className="space-y-3 text-[15px] leading-7 text-foreground/90">
-    {normalized.split(/\n/).map((raw, i) => {
-      const line = raw.trim();
-      if (!line) return <div key={i} className="h-1" aria-hidden="true" />;
-      const heading = line.match(/^#{1,4}\s*(.+)$/);
-      if (heading) return <h3 key={i} className="mt-5 border-b border-border/70 pb-2 text-lg font-bold tracking-tight text-foreground"><InlineAnswer text={heading[1]} /></h3>;
-      const bullet = line.match(/^[-*•]\s+(.+)$/);
-      if (bullet) return <div key={i} className="flex items-start gap-3 pl-2"><span aria-hidden="true" className="mt-0.5 font-bold text-primary">•</span><p className="flex-1"><InlineAnswer text={bullet[1]} /></p></div>;
-      const numbered = line.match(/^(\d+[.)])\s+(.+)$/);
-      if (numbered) return <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/40 px-3 py-2"><span className="shrink-0 font-bold text-primary">{numbered[1]}</span><p className="flex-1"><InlineAnswer text={numbered[2]} /></p></div>;
-      return <p key={i}><InlineAnswer text={line} /></p>;
+  const normalized = text.replace(/\r\n?/g,"\n")
+    .replace(/[ \t]+(#{1,4})[ \t]+/g,"\n\n$1 ")
+    .replace(/([.!?])\s+(\d+[.)]\s+[A-Z])/g,"$1\n$2")
+    .replace(/\n{3,}/g,"\n\n");
+  const lines=normalized.split("\n");
+  return <article className="space-y-4 text-[15px] leading-7 text-foreground/90">
+    {lines.map((raw,i)=>{
+      const line=raw.trim();
+      if(!line)return null;
+      const heading=line.match(/^#{1,6}\s+(.+)$/);
+      if(heading)return <h3 key={i} className="mt-8 border-b border-border pb-3 text-lg font-bold tracking-tight text-foreground"><InlineAnswer text={heading[1]}/></h3>;
+      const bullet=line.match(/^[-*•]\s+(.+)$/);
+      if(bullet)return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-bold text-primary">•</span><p className="min-w-0 flex-1"><InlineAnswer text={bullet[1]}/></p></div>;
+      const numbered=line.match(/^(\d+[.)])\s+(.+)$/);
+      if(numbered)return <div key={i} className="flex items-start gap-3 rounded-lg bg-secondary/35 px-3 py-2"><span className="shrink-0 font-bold text-primary">{numbered[1]}</span><p className="min-w-0 flex-1"><InlineAnswer text={numbered[2]}/></p></div>;
+      if(/^\*\*[^*]+\*\*:?$/.test(line))return <h4 key={i} className="mt-6 text-base font-bold text-foreground"><InlineAnswer text={line.replace(/:$/,"")}/></h4>;
+      return <p key={i} className="break-words"><InlineAnswer text={line}/></p>;
     })}
-  </div>;
+  </article>;
 }
 function Page() {
   const search=Route.useSearch();
   const incoming=search.topic.trim();
-  const initial=incoming ? "Teach me the topic "+incoming+" in "+(search.subject||"my DPT subject")+(search.semester?" (semester "+search.semester+")":"")+". Explain important concepts and subtopics clearly with examples, and include clinical relevance only if appropriate to this subject." : modes[0].example;
+  const initial=incoming ? "Teach me "+incoming+" in "+(search.subject||"my DPT subject")+(search.semester?" (semester "+search.semester+")":"")+". Explain the full topic clearly and in depth, step by step, with important subtopics, definitions of difficult terms, relevant examples and a concise revision summary. Use professional section headings and readable lists. Include clinical applications only if relevant to the subject." : modes[0].example;
   const [mode, setMode] = useState<Mode>(incoming?"study":"clinical");
   const [question, setQuestion] = useState(initial);
   const [answer, setAnswer] = useState("");
