@@ -65,17 +65,41 @@ function topicsFor(id:string) {
   return key?outlines[key]:["Introduction","Core concepts","Important principles","Practical applications","Revision"];
 }
 function NotesText({value}:{value:string}) {
-  const cleaned=value.replace(/\r/g,"").replace(/\\\*/g,"*").replace(/\*\*/g,"").replace(/\*/g,"").replace(/(^|\n)\s*#{1,6}\s*/g,"$1").replace(/\s+#{2,6}\s+/g,"\n").replace(/\s+[-•]\s+(?=[A-Z])/g,"\n- ");
+  // Normalize AI formatting safely, without rendering raw HTML.
+  const cleaned=value.replace(/\r/g,"").replace(/\\\*/g,"*")
+    .replace(/(^|\n)\s*#{1,6}\s*/g,"$1")
+    .replace(/\s+#{2,6}\s+/g,"\n")
+    .replace(/\*\*/g,"").replace(/\*/g,"")
+    .replace(/\s+[•]\s+(?=[A-Z])/g,"\n• ");
   const lines=cleaned.split("\n").map(s=>s.trim()).filter(Boolean);
-  return <article className="space-y-3 text-[15px] leading-7 text-foreground/90">{lines.map((line,i)=>{
+  const headingNames=/^(Introduction|Definition|Overview|Classification|Types|Key Concepts|Easy Explanation|Detailed Explanation|Mechanism|Functions|Actions|Origin|Insertion|Nerve Supply|Anatomical Location|Position|Examples?|Clinical Relevance|Clinical Applications|Practical Applications|Summary|Quick Revision(?: Points)?|Important Points|Viva Questions(?: with Answers)?|Questions and Answers|Causes|Symptoms|Management|Procedure|Precautions|Contraindications|Indications|Principles|Applications|Conclusion|Anatomy|Structure|Physiology|Pathophysiology|Assessment|Treatment|Key Takeaways)\s*:?$/i;
+  type NoteBlock={kind:"heading"|"subheading"|"text"|"bullet"|"number";text:string;number?:string};
+  const blocks:NoteBlock[]=lines.map((line)=>{
+    const explicit=line.match(/^SECTION:\s*(.+)$/i);
+    if(explicit)return {kind:"heading",text:explicit[1]};
+    const sub=line.match(/^SUBSECTION:\s*(.+)$/i);
+    if(sub)return {kind:"subheading",text:sub[1]};
+    if(headingNames.test(line))return {kind:"heading",text:line.replace(/:$/,"")};
     const numbered=line.match(/^(\d+)[.)]\s+(.+)$/);
-    const bullet=line.match(/^[-•]\s*(.+)$/);
-    const heading=/^(Introduction|Definition|Overview|Classification|Types|Key Concepts|Easy Explanation|Detailed Explanation|Mechanism|Functions|Actions|Origin|Insertion|Nerve Supply|Anatomical Location|Position|Examples?|Clinical Relevance|Clinical Applications|Practical Applications|Summary|Quick Revision|Important Points|Viva Questions|Questions and Answers|Causes|Symptoms|Management|Procedure|Precautions|Contraindications|Indications|Principles|Applications|Conclusion)\s*:?$/i.test(line);
-    if(heading)return <h3 key={i} className="mt-6 border-b pb-2 text-lg font-bold text-foreground">{line.replace(/:$/,"")}</h3>;
-    if(bullet||numbered)return <div key={i} className="flex gap-3 rounded-md bg-secondary/35 px-3 py-2"><span className="shrink-0 font-semibold text-primary">{numbered?numbered[1]+".":"•"}</span><p className="min-w-0">{(numbered?numbered[2]:bullet?.[1])||""}</p></div>;
-    if(line.endsWith(":")&&line.length<90)return <h3 key={i} className="mt-6 text-base font-bold text-foreground">{line.slice(0,-1)}</h3>;
-    return <p key={i}>{line}</p>;
-  })}</article>;
+    if(numbered)return {kind:"number",text:numbered[2],number:numbered[1]};
+    const bullet=line.match(/^(?:[-•]\s+|ITEM:\s*)(.+)$/i);
+    if(bullet)return {kind:"bullet",text:bullet[1]};
+    if(line.endsWith(":")&&line.length<85)return {kind:"subheading",text:line.slice(0,-1)};
+    return {kind:"text",text:line};
+  });
+  function emphasis(text:string) {
+    const match=text.match(/^([^:]{2,65}):\s+(.+)$/);
+    if(!match)return text;
+    return <><strong className="font-semibold text-slate-900">{match[1]}:</strong> {match[2]}</>;
+  }
+  return <article className="space-y-4 text-[15px] leading-7 text-slate-700">
+    {blocks.map((block,i)=>{
+      if(block.kind==="heading")return <div key={i} className="mt-9 flex items-center gap-3 border-b border-slate-200 pb-3 first:mt-0"><span className="h-6 w-1 shrink-0 rounded-full bg-blue-600"/><h3 className="text-lg font-bold tracking-tight text-slate-950">{block.text}</h3></div>;
+      if(block.kind==="subheading")return <h4 key={i} className="mt-6 text-base font-bold text-slate-900">{block.text}</h4>;
+      if(block.kind==="bullet"||block.kind==="number")return <div key={i} className="flex items-start gap-3 pl-1"><span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-blue-50 text-xs font-bold text-blue-700">{block.kind==="number"?block.number:"•"}</span><p className="min-w-0 flex-1">{emphasis(block.text)}</p></div>;
+      return <p key={i} className="max-w-none">{emphasis(block.text)}</p>;
+    })}
+  </article>;
 }
 function Page(){
   const search=Route.useSearch();
@@ -94,7 +118,7 @@ function Page(){
     try{
       const nonClinical = /^(english-|pakistan-studies|computer$|islamic-studies$|sociology$|biostatistics-|research-methodology$|research-project$|professional-practice$)/.test(course.id);
       const application = nonClinical ? "Explain subject-specific applications and worked examples; do not include clinical relevance, patient cases or physiotherapy applications unless directly requested or genuinely part of the topic." : "Include clinical relevance and physiotherapy applications only when they naturally apply to the topic.";
-      const question="Create detailed, simple, comprehensive DPT study notes for semester "+course.semester+", subject "+course.name+", topic "+t+". Explain all important subtopics, concepts, classifications, processes, examples and exam points in depth, not just a definition. "+application+" For anatomical muscle topics, cover anatomical location, origin, insertion, nerve supply and actions for individual major muscles, grouping by region. For non-muscle topics, adapt headings and details to that subject. Include revision points and three viva questions with answers. IMPORTANT FORMAT: Output plain text only, with separate lines for headings and list items. NEVER output Markdown formatting: no asterisks, no hash signs, no backticks, no bold or italic markup. Use ordinary headings and numbered points. Do not invent sources.";
+      const question="Create detailed, simple, comprehensive DPT study notes for semester "+course.semester+", subject "+course.name+", topic "+t+". Explain all important subtopics, concepts, classifications, processes, examples and exam points in depth, not just a definition. "+application+" For anatomical muscle topics, cover anatomical location, origin, insertion, nerve supply and actions for individual major muscles, grouping by region. For non-muscle topics, adapt headings and details to that subject. Include revision points and three viva questions with answers. IMPORTANT OUTPUT FORMAT: Use SECTION: Heading on a separate line for each major section, SUBSECTION: Name for subtopics, ITEM: Detail for bullet items, and ordinary paragraphs for explanations. Each SECTION, SUBSECTION and ITEM must start on a NEW LINE. Do not use Markdown symbols (asterisks, hashes or backticks). Write professional textbook-style sections, not a wall of text. Do not invent sources.";
       const result=await ask({data:{mode:"notes",question}});
       setAnswer(result.answer);
     }catch(e){setError(e instanceof Error?e.message:"Could not generate notes.");}
@@ -113,7 +137,7 @@ function Page(){
         </Card>
         {busy&&<p role="status">Preparing your notes…</p>}
         {error&&<p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{error}</p>}
-        {answer&&<Card><h2 className="mb-4 border-b pb-4 text-xl font-bold">{topic}</h2><NotesText value={answer}/><div className="mt-5 flex gap-2 border-t pt-4"><Button variant="outline" onClick={()=>navigator.clipboard?.writeText(answer)}>Copy notes</Button><Button variant="outline" onClick={()=>window.print()}>Print</Button></div><p className="mt-3 text-xs text-muted-foreground">AI-generated study notes; verify important facts with textbooks and instructors.</p></Card>}
+        {answer&&<Card><header className="mb-7 rounded-xl border border-slate-200 bg-slate-50 px-5 py-6"><p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-700">PhysioSmart AI · Study Notes</p><h2 className="text-2xl font-bold tracking-tight text-slate-950">{topic}</h2><p className="mt-2 text-sm text-slate-600">{course.name} · Semester {course.semester}</p></header><NotesText value={answer}/><div className="mt-5 flex gap-2 border-t pt-4"><Button variant="outline" onClick={()=>navigator.clipboard?.writeText(answer)}>Copy notes</Button><Button variant="outline" onClick={()=>window.print()}>Print</Button></div><p className="mt-3 text-xs text-muted-foreground">AI-generated study notes; verify important facts with textbooks and instructors.</p></Card>}
       </div>}
     </Container>
   </>;
