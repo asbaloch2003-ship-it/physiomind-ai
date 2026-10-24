@@ -38,7 +38,7 @@ function Index() {
         <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 py-10 sm:px-8 lg:grid-cols-[1.12fr_1fr] lg:gap-16 lg:py-12">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-success"><GraduationCap className="h-4 w-4" />For DPT students in Pakistan</p>
-            <p className="mt-5 font-display text-lg font-semibold text-primary">PhysioSmart AI</p>
+            <div className="mt-5 inline-flex items-center gap-3" aria-label="PhysioSmart AI brand"><img src="/physiosmart-logo.svg" alt="" width="64" height="64" className="h-16 w-16 shrink-0 object-contain" /><div><p className="font-display text-xl font-bold tracking-tight text-primary">PhysioSmart <span className="text-accent">AI</span></p><p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Learn · Practice · Excel</p></div></div>
             <h1 className="mt-3 text-[32px] font-bold leading-[1.22] sm:text-[42px] xl:text-[46px]">
               Don't just learn physiotherapy. <span className="text-primary">Learn to think like a physiotherapist.</span>
             </h1>
