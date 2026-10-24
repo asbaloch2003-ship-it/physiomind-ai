@@ -39,10 +39,14 @@ function Page() {
                   <Tag>{course ? `Semester ${course.semester}` : "General"}</Tag>
                 </div>
                 <p className="mt-4 text-sm text-muted-foreground">{m.note}</p>
-                <button type="button" className="mt-4 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-secondary" onClick={() => setExpanded(prev => ({...prev, [m.courseId]: !prev[m.courseId]}))}>{expanded[m.courseId] ? "Hide viva question" : "Practice viva question"}</button>\n                {expanded[m.courseId] && <div className="mt-4 flex gap-3 rounded-md bg-secondary p-3">
+                <button type="button" className="mt-4 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-secondary" onClick={() => setExpanded(prev => ({...prev, [m.courseId]: !prev[m.courseId]}))}>{expanded[m.courseId] ? "Hide viva question" : "Practice viva question"}</button>
+                {expanded[m.courseId] && <div className="mt-4 flex gap-3 rounded-md bg-secondary p-3">
                   <GraduationCap className="mt-0.5 size-4 shrink-0 text-accent" />
                   <p className="text-sm"><span className="font-semibold">Viva prompt:</span> {m.viva}</p>
-                </div>}\n                <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={!!reviewed[m.courseId]} onChange={e => setReviewed(prev => ({...prev, [m.courseId]: e.target.checked}))} /> Mark as reviewed</label>\n                <a className="mt-3 inline-block text-sm font-semibold text-primary underline" href={"/ai-assistant?source=notes"}>Ask AI to explain this topic →</a>\n              </Card>
+                </div>}
+                <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={!!reviewed[m.courseId]} onChange={e => setReviewed(prev => ({...prev, [m.courseId]: e.target.checked}))} /> Mark as reviewed</label>
+                <a className="mt-3 inline-block text-sm font-semibold text-primary underline" href={"/ai-assistant?source=notes"}>Ask AI to explain this topic →</a>
+              </Card>
             );
           })}
         </div>
