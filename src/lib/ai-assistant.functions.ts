@@ -32,11 +32,31 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         }),
       });
       if (!response.ok) {
-        if (response.status === 429) throw new Error("Gemini quota exceeded (HTTP 429). Check free-tier limits.");
-        if (response.status === 400) throw new Error("Gemini rejected the request (HTTP 400). Check model configuration.");
-        if (response.status === 401 || response.status === 403) throw new Error("Gemini API access denied (HTTP " + response.status + "). Check API key permissions.");
-        if (response.status === 404) throw new Error("Gemini model " + model + " unavailable (HTTP 404). Set GEMINI_MODEL to an available model.");
-        throw new Error("Gemini request failed (HTTP " + response.status + ").");
+        // Google's structured error message explains which model, API version, or
+        // project permission failed. Never expose raw responses or credentials.
+        let detail = "";
+        try {
+          const payload: unknown = await response.json();
+          if (payload && typeof payload === "object" && "error" in payload) {
+            const error = payload.error;
+            if (error && typeof error === "object" && "message" in error && typeof error.message === "string") {
+              detail = error.message;
+            }
+          }
+        } catch {
+          // A non-JSON response is possible; retain the HTTP status below.
+        }
+        const safeDetail = detail
+          .replaceAll(key, "[REDACTED]")
+          .replace(/AIza[0-9A-Za-z_-]{20,}/g, "[REDACTED]")
+          .replace(/https?:\\/\\/\\S+/g, "[URL]")
+          .replace(/[\\r\\n\\t]+/g, " ")
+          .slice(0, 450);
+        const label = response.status === 429 ? "Gemini free-tier quota"
+          : response.status === 401 || response.status === 403 ? "Gemini API access"
+          : response.status === 404 ? "Gemini model or endpoint"
+          : "Gemini API";
+        throw new Error(label + " error (HTTP " + response.status + ")" + (safeDetail ? ": " + safeDetail : ". Check your model and project settings."));
       }
       const result = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
       const answer = result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
