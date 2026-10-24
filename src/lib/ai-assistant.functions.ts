@@ -3,7 +3,7 @@ import { z } from "zod";
 
 const Input = z.object({
   mode: z.enum(["clinical", "study", "quiz", "notes"]),
-  question: z.string().trim().min(8).max(4000),
+  question: z.string().trim().min(8).max(8000),
 });
 
 const guidance = {
