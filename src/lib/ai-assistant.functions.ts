@@ -4,6 +4,7 @@ import { z } from "zod";
 const Input = z.object({
   mode: z.enum(["clinical", "study", "quiz", "notes"]),
   question: z.string().trim().min(8).max(8000),
+  reportLength: z.enum(["quick","detailed"]).optional(),
 });
 
 const guidance = {
@@ -24,7 +25,8 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
-    const prompt = "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
+    const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Provide a detailed clinical teaching report with fuller explanations, approximately 900-1300 words when warranted. Preserve all nine sections and prioritize urgent safety guidance. " : "Provide a QUICK clinical report of approximately 400-600 words total, with all nine sections retained. Use 1-3 brief, case-specific bullets per section; 3-4 targeted history questions are acceptable. Be especially concise in low-priority sections, but never shorten or omit urgent red-flag advice. ") : "";
+    const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     for (const model of models) {
@@ -40,7 +42,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: prompt }] },
               contents: [{ role: "user", parts: [{ text: data.question }] }],
-              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : data.mode === "clinical" ? 3200 : 1200 },
+              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 1750) : 1200 },
             }),
           },
         );
