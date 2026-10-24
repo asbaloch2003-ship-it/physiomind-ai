@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "PhysioSmart AI",
+  "short_name": "PhysioSmart",
+  "description": "DPT learning and educational physiotherapy clinical reasoning",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0646c9",
+  "icons": [
+    {
+      "src": "/physiosmart-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
