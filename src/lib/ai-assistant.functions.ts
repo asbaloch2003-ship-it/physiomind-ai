@@ -25,7 +25,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
-    const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Provide a detailed clinical teaching report with fuller explanations, approximately 900-1300 words when warranted. Preserve all seven sections and prioritize urgent safety guidance. " : "Provide a QUICK clinical report of approximately 400-600 words total, with all seven sections retained. Use 1-3 brief, case-specific bullets per section; 3-4 targeted history questions are acceptable. Be especially concise in low-priority sections, but never shorten or omit urgent red-flag advice. ") : "";
+    const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Provide a detailed clinical teaching report with fuller explanations, approximately 900-1300 words when warranted. Preserve all seven sections and prioritize urgent safety guidance. " : "Create an ultra-concise physiotherapy CLINIC SNAPSHOT of 120-200 words maximum, optimized for a physiotherapist to scan in under one minute. OVERRIDE the seven-section report structure for QUICK mode only: write exactly five compact headings on separate lines: ## 1. Safety / Refer; ## 2. Key PT Findings; ## 3. PT Impression; ## 4. PT Plan; ## 5. Review / Goals. Under each heading write at most two short, specific bullet points, ideally one. Prioritize urgent red flags and immediate referral; for suspected emergency, state the referral clearly and explicitly defer routine testing and treatment until cleared. Mention only the most useful assessment or test, top working hypothesis (not a confirmed diagnosis), 2-3 prioritized physiotherapy actions if safe, and one functional outcome/reassessment target. No additional history questionnaire, references, long explanations, repetition, introductions or closing paragraphs. Include a brief educational disclaimer within Review / Goals. Do not sacrifice safety to meet the word limit. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
@@ -45,7 +45,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: prompt }] },
               contents: [{ role: "user", parts: [{ text: data.question }] }],
-              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 1750) : 1200 },
+              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 800) : 1200 },
             }),
           },
         );
