@@ -17,7 +17,7 @@ const nav = [
 export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2.5">
-      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-border" aria-label="PhysioSmart AI logo"><img src="/physiosmart-logo.svg" alt="" className="h-full w-full object-contain" /></span>
+      <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl shadow-sm" aria-label="PhysioSmart AI logo"><img src="/physiosmart-logo.svg" alt="" className="h-full w-full rounded-xl object-cover" /></span>
       <span className="font-display leading-tight">
         <span className="block text-xl font-bold">PhysioSmart <span className="text-accent">AI</span></span>
         <span className="hidden text-[11px] font-medium tracking-wide text-muted-foreground sm:block">Learn to think like a physiotherapist.</span>
