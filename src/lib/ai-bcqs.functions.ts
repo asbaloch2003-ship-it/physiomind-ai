@@ -27,7 +27,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           method: "POST", signal: controller.signal,
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: "You write accurate, single-best-answer educational physiotherapy questions for DPT students. Return ONLY a valid JSON object: {\\"questions\\":[{\\"question\\":\\"...\\",\\"options\\":[\\"...\\",\\"...\\",\\"...\\",\\"...\\"],\\"answer\\":0,\\"explanation\\":\\"...\\"}]}. Exactly " + data.count + " distinct questions. The answer is the ZERO-BASED index of the single correct option. Make distractors plausible. Include a short teaching explanation. Do not include markdown code fences. Avoid unsupported clinical certainty or fabricated references." }] },
+            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
             contents: [{ role: "user", parts: [{ text: "Generate " + data.count + " topic-specific BCQs on: " + data.topic }] }],
             generationConfig: { maxOutputTokens: 2200, responseMimeType: "application/json" },
           }),
