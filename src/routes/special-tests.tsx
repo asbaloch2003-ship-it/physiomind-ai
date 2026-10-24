@@ -58,6 +58,30 @@ function Diagram({type,name}:{type:string;name:string}) {
   </figure>;
 }
 
+const posterIndex: Record<string, number> = {
+  "Lachman Test": 0, "McMurray Test": 1, "Neer Test": 2,
+  "Hawkins–Kennedy Test": 3, "Straight Leg Raise": 4,
+  "Phalen Test": 5, "Thomas Test": 6, "Spurling Test": 7,
+};
+function PosterPanel({name}:{name:string}) {
+  const index = posterIndex[name];
+  const col = index % 4;
+  const row = Math.floor(index / 4);
+  return <figure className="overflow-hidden rounded-xl border bg-white shadow-sm">
+    <div className="border-b bg-slate-50 px-4 py-3 text-sm font-bold text-slate-900">{name} — illustrated clinical guide</div>
+    <div role="img" aria-label={name+" educational infographic showing positioning, procedure, positive and negative examples"}
+      className="w-full"
+      style={{
+        aspectRatio: "3 / 4",
+        backgroundImage: "url('/special-tests-complete.png.png')",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "400% 200%",
+        backgroundPosition: (col*100/3)+"% "+(row*100)+"%",
+      }}/>
+    <figcaption className="px-4 py-3 text-xs leading-5 text-slate-600">AI-generated illustration: may contain incorrect anatomy, text or test technique. Use the written guide below and verify with a qualified clinical instructor.</figcaption>
+  </figure>;
+}
+
 function Page() {
   const [region,setRegion]=useState("All");
   const [opened,setOpened]=useState<string|null>(null);
@@ -70,7 +94,7 @@ function Page() {
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-1 text-sm text-muted-foreground">{t.purpose}</p></div><Tag>{t.region}</Tag></div>
         <button type="button" aria-expanded={opened===t.name} onClick={()=>setOpened(opened===t.name?null:t.name)} className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-left text-sm font-semibold text-primary-foreground">{opened===t.name?"− Close detailed guide":"+ Open detailed guide"}</button>
         {opened===t.name&&<div className="mt-5 space-y-4 text-sm leading-6">
-          {t.name==="Lachman Test" ? <figure className="overflow-hidden rounded-xl border bg-white"><img src="/MnkqX4WH6sIM99OZuIcIwrDQYUKKW6Pi_L1A_S0O-7_myrfuE1Zb-qzSNZHl58zvhzDBCzoHrWqXg9Umrk3eEfisvyMtOVw-fkPzb4Mt_L4xHxm9uhXkmUPs4QOytnfankmlqWKF2VrSG8yeaAwI8YZ1yow61Uw3vP7lSHsiUUHcxF8hksGED7e-BZrxgdfb.jpg" alt="Lachman test clinical demonstration image" className="h-auto w-full" loading="lazy" /><figcaption className="px-4 py-3 text-xs leading-5 text-muted-foreground">AI-generated educational illustration. Confirm exact clinical technique with a qualified instructor; image details and accuracy require review.</figcaption></figure> : <Diagram type={t.diagram} name={t.name}/> }
+          <PosterPanel name={t.name}/>
           <div><h3 className="font-bold text-primary">Patient position</h3><p>{t.patient}</p></div>
           <div><h3 className="font-bold text-primary">Physiotherapist position and hand placement</h3><p>{t.therapist}</p></div>
           <div><h3 className="font-bold text-primary">Step-by-step procedure</h3><ol className="mt-2 list-inside list-decimal space-y-2">{t.steps.map((s,i)=><li key={i}>{s}</li>)}</ol></div>
