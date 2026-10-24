@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, Container, PageHeader, meta } from "@/components/site";
 import { SourceReference, StudyFilters } from "@/components/curriculum-controls";
@@ -17,6 +17,9 @@ function Page() {
   const [semester, setSemester] = useState(search.semester ?? "all");
   const [subject, setSubject] = useState(search.course ?? "all");
   const [ans, setAns] = useState<Record<string, number>>({});
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => { try { const saved = localStorage.getItem("physiosmart-bcq-answers"); if (saved) setAns(JSON.parse(saved)); } catch {} setLoaded(true); }, []);
+  useEffect(() => { if (loaded) try { localStorage.setItem("physiosmart-bcq-answers", JSON.stringify(ans)); } catch {} }, [ans, loaded]);
   function pick(courseId: string, selectedOption: number) {
     setAns(prev => ({ ...prev, [courseId]: selectedOption }));
   }
@@ -29,7 +32,7 @@ function Page() {
       <PageHeader eyebrow="Exam practice" title="BCQs & Quizzes" desc="One best-choice question for every course in the uploaded HEC DPT study scheme. Select an answer for instant feedback." />
       <Container>
         <SourceReference />
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-y py-4"><p className="text-sm text-muted-foreground">Free guest practice — no account needed. Your answers stay on this page.</p><Button variant="outline" size="sm" onClick={reset}>Restart quiz</Button></div>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-y py-4"><p className="text-sm text-muted-foreground">Free guest practice — no account needed. Your answers are saved in this browser.</p><Button variant="outline" size="sm" onClick={reset}>Restart quiz</Button></div>
         <StudyFilters semester={semester} subject={subject} onSemester={setSemester} onSubject={setSubject} />
         <p className="mb-6 text-sm font-semibold" aria-live="polite">Score: <span className="text-primary">{score}</span> / {answered} answered · {list.length} questions</p>
         <div className="space-y-5">
