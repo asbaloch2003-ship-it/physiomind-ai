@@ -9,7 +9,7 @@ export const Route = createFileRoute("/feedback")({
   component: FeedbackPage,
 });
 const roles = ["DPT student", "Physiotherapist", "Faculty", "Other"] as const;
-const areas = ["Overall experience", "Study materials", "Special tests", "AI clinical reasoning", "BCQs", "Accessibility"] as const;
+const areas = ["Overall experience", "Study materials", "Special tests", "AI clinical reasoning", "BCQs", "Accessibility", "History taking forms", "Notes", "Curriculum", "Other"] as const;
 function FeedbackPage() {
   const submit = useServerFn(submitFeedback);
   const [role, setRole] = useState<(typeof roles)[number]>("DPT student");
@@ -37,9 +37,9 @@ function FeedbackPage() {
     <Container>
       <div className="mx-auto max-w-2xl">
         <Card>
-          {success ? <div role="status" className="space-y-3"><h2 className="text-xl font-bold text-primary">Thank you for your feedback!</h2><p>Your response has been submitted to the project team.</p><button className="rounded-lg border px-4 py-2" onClick={() => { setSuccess(false); setComment(""); setRating(0); setContact(""); }}>Submit another response</button></div> :
+          {success ? <div role="status" className="space-y-3"><h2 className="text-xl font-bold text-primary">Thank you for your feedback!</h2><p>Your feedback was saved successfully. Thank you for helping improve PhysioSmart AI.</p><button className="rounded-lg border px-4 py-2" onClick={() => { setSuccess(false); setComment(""); setRating(0); setContact(""); }}>Submit another response</button></div> :
           <form onSubmit={send} className="space-y-5">
-            <p className="text-sm text-muted-foreground">No account is required. Please do not include patient names, clinical records or other sensitive personal information. Your optional contact information will be stored with your feedback and used only if the team needs to follow up.</p>
+            <p className="text-sm text-muted-foreground">No account is required. Your responses are collected for project evaluation and improvements. Please do not include patient names, clinical records or other sensitive personal information. Your optional contact information will be stored with your feedback and used only if the team needs to follow up.</p>
             <label className="block text-sm font-semibold">Your role
               <select value={role} onChange={e => setRole(e.target.value as typeof role)} className="mt-2 w-full rounded-lg border bg-background p-3">{roles.map(v => <option key={v}>{v}</option>)}</select>
             </label>
