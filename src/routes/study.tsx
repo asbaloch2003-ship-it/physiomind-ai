@@ -6,6 +6,7 @@ import { SemesterFilter, SourceReference } from "@/components/curriculum-control
 import { courses } from "@/lib/curriculum";
 import { getCurriculumTopics } from "@/lib/curriculum-topics";
 import { studyMaterials } from "@/lib/study-materials";
+import { TopicOutline } from "@/components/topic-outline";
 
 export const Route = createFileRoute("/study")({
   head: () => meta("Interactive DPT Study", "Choose a semester and course, study core topics, practice recall, and review with AI."),
@@ -20,7 +21,6 @@ function Page() {
   const [customTopic, setCustomTopic] = useState("");
   const filtered = courses.filter(c => semester === "all" || c.semester === Number(semester));
   const course = courses.find(c => c.id === selected);
-  const outline = course ? courseOutlines[course.id] : undefined;
   const material = studyMaterials.find(m => m.courseId === selected);
   const topics = course ? getCurriculumTopics(course.id).map(t => t.title) : [];
   const activeTopic = topics[topic];
@@ -44,9 +44,7 @@ function Page() {
         <Card>
           <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">{course.name}</h2><Tag>Semester {course.semester}</Tag></div>
           <p className="mt-3 text-sm text-muted-foreground">{topics.length} curriculum topics available</p>
-          {topics.length > 0 ? <div className="mt-5 max-h-[540px] space-y-2 overflow-y-auto">
-            {topics.map((t,i) => <button key={i} type="button" onClick={() => { setTopic(i); setShowAnswer(false); }} className={`block w-full rounded-lg border px-3 py-3 text-left text-sm transition hover:border-primary hover:bg-secondary ${topic === i ? "border-primary bg-primary-soft font-semibold" : ""}`}>{i+1}. {t}</button>)}
-          </div> : <p className="mt-4 text-sm">Enter your own topic below.</p>}
+          <div className="mt-5 max-h-[560px] overflow-y-auto pr-1"><TopicOutline key={course.id} courseId={course.id} selected={activeTopic} onSelect={t => { const i = topics.indexOf(t); setTopic(i < 0 ? 0 : i); setShowAnswer(false); }} /></div>
           <div className="mt-5 border-t pt-4"><label htmlFor="custom-study-topic" className="text-sm font-semibold">Study another topic</label><input id="custom-study-topic" value={customTopic} onChange={e=>setCustomTopic(e.target.value)} maxLength={180} placeholder="Type any topic from this subject" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 text-sm"/>{customTopic.trim().length>=3&&<Link to="/ai-assistant" search={tutorSearch(customTopic.trim())} className="mt-3 inline-flex rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Study with AI →</Link>}</div>
         </Card>
         <div className="space-y-5">
