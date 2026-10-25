@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { curriculumAssessments } from "@/lib/curriculum-assessments";
 import { useState } from "react";
 import { Card, Container, Disclaimer, PageHeader, Tag, meta } from "@/components/site";
 
@@ -185,10 +186,25 @@ function NeurodynamicPositions({name}:{name:string}) {
 function Page() {
   const [region,setRegion]=useState("All");
   const [opened,setOpened]=useState<string|null>(null);
+  const [query,setQuery]=useState("");
+  const [semester,setSemester]=useState("all");
+  const [showCurriculum,setShowCurriculum]=useState(true);
+  const filteredAssessments=curriculumAssessments.filter(a=>(semester==="all"||a.semester===Number(semester))&&[a.title,a.course].some(v=>v.toLowerCase().includes(query.toLowerCase())));
   const list=tests.filter(t=>region==="All"||t.region===region);
   return <>
-    <PageHeader eyebrow="Clinical skills library" title="Physiotherapy Special Tests" desc="Explore orthopaedic and neurodynamic assessments with patient and therapist positions, step-by-step technique, positive findings, structural differentiation and safety considerations." />
+    <PageHeader eyebrow="Clinical skills library" title="Physiotherapy Tests & Assessments" desc="Browse the curriculum-listed physiotherapy assessment topics alongside detailed orthopaedic and neurodynamic test guides." />
     <Container>
+      <section className="mb-10 rounded-2xl border bg-card p-5 sm:p-7">
+        <button type="button" aria-expanded={showCurriculum} onClick={()=>setShowCurriculum(v=>!v)} className="flex w-full items-center justify-between gap-3 text-left"><span><span className="block text-xl font-bold">Curriculum tests and assessments</span><span className="mt-1 block text-sm text-muted-foreground">Topics explicitly named in the DPT curriculum; open any item for an educational explanation.</span></span><span className="shrink-0 text-sm font-semibold text-primary">{showCurriculum?"Hide −":"Show +"}</span></button>
+        {showCurriculum&&<div className="mt-5">
+          <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_190px]"><input aria-label="Search physiotherapy assessments" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search tests, assessment types or subjects…" className="h-11 w-full rounded-lg border bg-background px-3 text-sm"/><select aria-label="Filter by semester" value={semester} onChange={e=>setSemester(e.target.value)} className="h-11 rounded-lg border bg-background px-3 text-sm"><option value="all">All semesters</option>{Array.from({length:10},(_,i)=><option key={i} value={String(i+1)}>Semester {i+1}</option>)}</select></div>
+          <p className="mb-3 text-xs text-muted-foreground">{filteredAssessments.length} curriculum assessment entries found. The syllabus sometimes names assessment categories rather than individual procedures.</p>
+          <div className="grid max-h-[560px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">{filteredAssessments.map(a=><Link key={a.id} to="/ai-assistant" search={{topic:a.title,subject:a.course,semester:String(a.semester),auto:"1"}} className="rounded-xl border px-4 py-3 transition hover:border-primary hover:bg-primary-soft"><span className="block text-sm font-semibold">{a.title}</span><span className="mt-1 block text-xs text-muted-foreground">{a.course} · Semester {a.semester} · Curriculum p. {a.page}</span><span className="mt-2 block text-xs font-semibold text-primary">Read assessment explanation →</span></Link>)}</div>
+          {!filteredAssessments.length&&<p className="py-6 text-center text-sm text-muted-foreground">No matching curriculum entries. Try another search or semester.</p>}
+          <p className="mt-4 text-xs text-muted-foreground">AI explanations are generated for learning and may not be verified. The existing detailed guides below provide structured positioning and safety instructions for selected tests.</p>
+        </div>}
+      </section>
+      <h2 className="mb-4 text-xl font-bold">Detailed special-test guides</h2>
       <div className="mb-7 flex flex-wrap gap-2">{regions.map(x=><button key={x} type="button" onClick={()=>{setRegion(x);setOpened(null)}} className={`rounded-full px-4 py-2 text-sm font-medium ${region===x?"bg-primary text-primary-foreground":"bg-secondary text-secondary-foreground hover:bg-primary-soft"}`}>{x}</button>)}</div>
       <div className="grid gap-4 md:grid-cols-2">{list.map(t=><Card key={t.name} className="!rounded-xl">
         <div className="flex items-start justify-between gap-3"><div><h2 className="text-lg font-bold">{t.name}</h2><p className="mt-1 text-sm text-muted-foreground">{t.purpose}</p></div><Tag>{t.region}</Tag></div>
