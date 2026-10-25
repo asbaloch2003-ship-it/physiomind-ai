@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { getFeedbackSummary } from "@/lib/feedback-summary.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { BookOpen, Stethoscope, BrainCircuit, ArrowRight, GraduationCap, ClipboardList, FileText, ListChecks, MessageCircle, Lightbulb, HeartPulse, ChartNoAxesCombined, ShieldCheck, Check, Layers } from "lucide-react";
 import { meta } from "@/components/site";
@@ -32,6 +35,9 @@ const classroom = [
 const clinical = ["Patient history", "Assessment", "Special tests", "Clinical reasoning", "Intervention", "Outcome measures", "Prognosis"];
 
 function Index() {
+  const getSummary = useServerFn(getFeedbackSummary);
+  const [summary, setSummary] = useState<{ available: boolean; count?: number; average?: number } | null>(null);
+  useEffect(() => { let active = true; getSummary().then(result => { if (active) setSummary(result); }).catch(() => {}); return () => { active = false; }; }, [getSummary]);
   return (
     <>
       <section className="homepage-hero border-b">
@@ -96,6 +102,26 @@ function Index() {
           </div>
         </div>
         <div className="mt-7 flex items-center gap-2 text-sm font-medium text-muted-foreground"><ChartNoAxesCombined className="h-4 w-4 text-success" />From understanding concepts to making evidence-informed decisions.</div>
+      </section>
+
+      <section className="border-t bg-card" aria-label="Community feedback">
+        <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+          <div className="flex flex-col gap-5 rounded-xl border bg-background p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div>
+              <p className="section-eyebrow">Community feedback</p>
+              <h2 className="mt-2 text-xl font-bold sm:text-2xl">Help shape PhysioSmart AI</h2>
+              {summary?.available && typeof summary.count === "number" && summary.count > 0 ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3" aria-label={`Average rating ${summary.average} out of 5 from ${summary.count} responses`}>
+                  <span className="text-3xl font-bold tabular-nums">{summary.average?.toFixed(1)}<span className="text-base font-normal text-muted-foreground"> / 5</span></span>
+                  <span className="text-amber-500" aria-hidden="true">★★★★★</span>
+                  <span className="text-sm text-muted-foreground">From {summary.count} {summary.count === 1 ? "response" : "responses"}</span>
+                </div>
+              ) : <p className="mt-3 text-sm text-muted-foreground">Share your experience to help us improve the platform.</p>}
+              <p className="mt-2 text-xs text-muted-foreground">Ratings reflect submitted feedback, not independently verified reviews.</p>
+            </div>
+            <Button asChild variant="outline" className="h-auto min-h-11 shrink-0 px-5 py-3"><Link to="/feedback">Share your feedback<ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          </div>
+        </div>
       </section>
 
       <section className="homepage-cta border-y bg-primary text-primary-foreground">
