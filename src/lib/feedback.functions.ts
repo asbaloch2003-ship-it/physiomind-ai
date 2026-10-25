@@ -19,6 +19,17 @@ export const submitFeedback = createServerFn({ method: "POST" })
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) throw new Error("Feedback collection is not configured yet. Please contact the project team.");
+    let endpoint: URL;
+    try {
+      const base = new URL(url.trim());
+      if (base.protocol !== "https:" || !base.hostname.endsWith(".supabase.co") || (base.pathname !== "/" && base.pathname !== "")) {
+        throw new Error("invalid project URL");
+      }
+      endpoint = new URL("/rest/v1/project_feedback", base.origin);
+    } catch {
+      console.error("Feedback Supabase URL configuration invalid", { reason: "Expected a Supabase project base URL with no path" });
+      throw new Error("Feedback database connection is misconfigured. Please contact the project team.");
+    }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
@@ -43,7 +54,7 @@ export const submitFeedback = createServerFn({ method: "POST" })
           const parsed = JSON.parse(errorBody) as { code?: string };
           code = typeof parsed.code === "string" ? parsed.code.slice(0, 30) : "";
         } catch { /* Avoid logging response bodies or credentials. */ }
-        console.error("Feedback database write failed", { status: response.status, code });
+        console.error("Feedback database write failed", { status: response.status, code, endpointPath: endpoint.pathname, projectHostMatches: endpoint.hostname.endsWith(".supabase.co") });
         throw new Error("Unable to save feedback right now. Please try again later.");
       }
       return { success: true };
