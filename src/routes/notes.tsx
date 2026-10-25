@@ -6,6 +6,7 @@ import { Card, Container, PageHeader, meta } from "@/components/site";
 import { SourceReference, StudyFilters } from "@/components/curriculum-controls";
 import { courses, getCourse } from "@/lib/curriculum";
 import { learningSearch } from "@/lib/study-materials";
+import { getCurriculumTopics } from "@/lib/curriculum-topics";
 import { askPhysioAI } from "@/lib/ai-assistant.functions";
 
 export const Route = createFileRoute("/notes")({
@@ -125,14 +126,14 @@ function Page(){
     finally{setBusy(false);}
   }
   return <>
-    <PageHeader eyebrow="DPT learning library" title="Semester-wise Study Notes" desc="Choose a semester, subject and topic to generate simple, easy-to-understand notes. No fixed list of 62 short notes."/>
+    <PageHeader eyebrow="DPT learning library" title="Semester-wise Study Notes" desc="Choose a semester, subject and topic to generate simple, easy-to-understand notes. Browse the expanded HEC course topic index and generate detailed explanations for selected topics."/>
     <Container>
       <SourceReference/>
       <StudyFilters semester={semester} subject={subject} onSemester={v=>{setSemester(v);setSubject("all");setAnswer("");}} onSubject={v=>{setSubject(v);setAnswer("");}}/>
       {!course?<div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">{courses.filter(c=>semester==="all"||c.semester===Number(semester)).map(c=><button key={c.id} onClick={()=>setSubject(c.id)} className="rounded-xl border bg-card p-5 text-left hover:border-primary"><span className="text-xs text-primary">Semester {c.semester}</span><h2 className="mt-2 font-semibold">{c.name}</h2><span className="mt-3 block text-sm text-muted-foreground">Explore topics →</span></button>)}</div>:
       <div className="space-y-5">
-        <Card><h2 className="text-xl font-bold">{course.name}</h2><p className="mt-2 text-sm text-muted-foreground">Select a suggested topic or type any topic from your curriculum. Suggested topics are independent study outlines, not a complete official syllabus.</p>
-          <div className="mt-5 grid gap-2 sm:grid-cols-2">{topicsFor(course.id).map(t=><button key={t} disabled={busy} onClick={()=>generate(t)} className="rounded-lg border p-3 text-left text-sm hover:bg-secondary">{t} →</button>)}</div>
+        <Card><h2 className="text-xl font-bold">{course.name}</h2><p className="mt-2 text-sm text-muted-foreground">Select a topic from the expanded HEC 2016 course outline or enter a topic manually. The generated explanation is AI-assisted and should be checked against your textbooks.</p>
+          <div className="mt-5 grid gap-2 sm:grid-cols-2">{getCurriculumTopics(course.id).map(({title:t})=><button key={t} disabled={busy} onClick={()=>generate(t)} className="rounded-lg border p-3 text-left text-sm hover:bg-secondary">{t} →</button>)}</div>
           <div className="mt-5 flex flex-wrap gap-2"><input aria-label="Topic name" className="h-11 min-w-48 flex-1 rounded-lg border bg-background px-3 text-sm" placeholder="Or type another topic…" value={custom} onChange={e=>setCustom(e.target.value)} maxLength={150}/><Button disabled={busy||custom.trim().length<3} onClick={()=>generate(custom)}>{busy?"Generating…":"Generate AI notes"}</Button></div>
         </Card>
         {busy&&<p role="status">Preparing your notes…</p>}
