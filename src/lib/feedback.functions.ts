@@ -36,7 +36,16 @@ export const submitFeedback = createServerFn({ method: "POST" })
           comment: data.comment, contact: data.contact || null,
         }),
       });
-      if (!response.ok) throw new Error("Unable to save feedback right now. Please try again later.");
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => "");
+        let code = "";
+        try {
+          const parsed = JSON.parse(errorBody) as { code?: string };
+          code = typeof parsed.code === "string" ? parsed.code.slice(0, 30) : "";
+        } catch { /* Avoid logging response bodies or credentials. */ }
+        console.error("Feedback database write failed", { status: response.status, code });
+        throw new Error("Unable to save feedback right now. Please try again later.");
+      }
       return { success: true };
     } finally { clearTimeout(timer); }
   });
