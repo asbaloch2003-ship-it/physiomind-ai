@@ -2,18 +2,44 @@
   "id": "/",
   "name": "PhysioSmart AI",
   "short_name": "PhysioSmart",
-  "description": "DPT learning and educational physiotherapy clinical reasoning",
+  "description": "DPT curriculum learning, special tests and educational clinical reasoning",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#ffffff",
   "theme_color": "#0646c9",
+  "orientation": "any",
+  "categories": [
+    "education",
+    "medical"
+  ],
   "icons": [
     {
       "src": "/physiosmart-logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Study",
+      "short_name": "Study",
+      "url": "/study"
+    },
+    {
+      "name": "Special Tests",
+      "short_name": "Tests",
+      "url": "/special-tests"
+    },
+    {
+      "name": "History Forms",
+      "short_name": "History",
+      "url": "/history-taking"
     }
   ]
 }
