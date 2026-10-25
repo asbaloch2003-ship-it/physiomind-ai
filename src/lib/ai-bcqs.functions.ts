@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { enforceAiRateLimit } from "./ai-rate-limit";
 
-const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.number().int().min(3).max(5) });
+const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(10), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional() });
 const Question = z.object({
   question: z.string().min(12),
   options: z.array(z.string().min(1)).length(4),
@@ -29,9 +29,9 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           method: "POST", signal: controller.signal,
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
-            contents: [{ role: "user", parts: [{ text: "Generate " + data.count + " topic-specific BCQs on: " + data.topic }] }],
-            generationConfig: { maxOutputTokens: 2200, responseMimeType: "application/json" },
+            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Cover different subtopics and difficulty levels. Avoid reusing previous questions or near-paraphrases when supplied. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
+            contents: [{ role: "user", parts: [{ text: "Generate " + data.count + " NEW topic-specific BCQs on: " + data.topic + ". Unique attempt: " + (data.attemptId || "new") + ". Do not repeat or closely paraphrase any of these previous questions: " + JSON.stringify(data.previousQuestions || []) }] }],
+            generationConfig: { maxOutputTokens: 5500, temperature: 0.95, responseMimeType: "application/json" },
           }),
         });
         if (!response.ok) {
@@ -44,7 +44,9 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
         if (!raw) { lastError = "AI returned no questions."; continue; }
         const cleaned = raw.replace(/^\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60$/, "");
         try {
-          const parsed = z.object({ questions: z.array(Question).min(1).max(5) }).parse(JSON.parse(cleaned));
+          const parsed = z.object({ questions: z.array(Question).length(10) }).parse(JSON.parse(cleaned));
+          const unique = new Set(parsed.questions.map(q => q.question.toLowerCase().replace(/[^a-z0-9]/g, "")));
+          if (unique.size !== 10) { lastError = "AI returned repeated questions. Please try again."; continue; }
           return { questions: parsed.questions, topic: data.topic };
         } catch { lastError = "AI returned an incomplete question set. Please try again."; }
       } catch (e) {
