@@ -4,7 +4,7 @@ import { BookOpen, BrainCircuit, CheckCircle2, ArrowRight } from "lucide-react";
 import { Container, PageHeader, Card, Tag, meta } from "@/components/site";
 import { SemesterFilter, SourceReference } from "@/components/curriculum-controls";
 import { courses } from "@/lib/curriculum";
-import { courseOutlines } from "@/lib/course-outlines";
+import { getCurriculumTopics } from "@/lib/curriculum-topics";
 import { studyMaterials } from "@/lib/study-materials";
 
 export const Route = createFileRoute("/study")({
@@ -22,7 +22,7 @@ function Page() {
   const course = courses.find(c => c.id === selected);
   const outline = course ? courseOutlines[course.id] : undefined;
   const material = studyMaterials.find(m => m.courseId === selected);
-  const topics = outline?.topics || [];
+  const topics = course ? getCurriculumTopics(course.id).map(t => t.title) : [];
   const activeTopic = topics[topic];
   const prompt = activeTopic ? `Explain ${activeTopic} in the context of ${course?.name} for a DPT student. Give key concepts, a clinical example, and a self-test question.` : `Teach me ${course?.name || "physiotherapy"} with a clinical example and self-test question.`;
   const tutorSearch = (t: string) => ({topic:t,subject:course?.name || "",semester:String(course?.semester || ""),auto:"1"});
@@ -45,7 +45,7 @@ function Page() {
           <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold">{course.name}</h2><Tag>Semester {course.semester}</Tag></div>
           <p className="mt-3 text-sm text-muted-foreground">{topics.length} curriculum topics available</p>
           {topics.length > 0 ? <div className="mt-5 max-h-[540px] space-y-2 overflow-y-auto">
-            {topics.map((t,i) => <Link key={i} to="/ai-assistant" search={tutorSearch(t)} className="block w-full rounded-lg border px-3 py-3 text-left text-sm transition hover:border-primary hover:bg-secondary">{i+1}. {t} →</Link>)}
+            {topics.map((t,i) => <button key={i} type="button" onClick={() => { setTopic(i); setShowAnswer(false); }} className={`block w-full rounded-lg border px-3 py-3 text-left text-sm transition hover:border-primary hover:bg-secondary ${topic === i ? "border-primary bg-primary-soft font-semibold" : ""}`}>{i+1}. {t}</button>)}
           </div> : <p className="mt-4 text-sm">Enter your own topic below.</p>}
           <div className="mt-5 border-t pt-4"><label htmlFor="custom-study-topic" className="text-sm font-semibold">Study another topic</label><input id="custom-study-topic" value={customTopic} onChange={e=>setCustomTopic(e.target.value)} maxLength={180} placeholder="Type any topic from this subject" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 text-sm"/>{customTopic.trim().length>=3&&<Link to="/ai-assistant" search={tutorSearch(customTopic.trim())} className="mt-3 inline-flex rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Study with AI →</Link>}</div>
         </Card>
