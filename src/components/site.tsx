@@ -7,6 +7,7 @@ const nav = [
   { to: "/study", label: "Study" },
   { to: "/curriculum", label: "Curriculum" },
   { to: "/special-tests", label: "Special Tests" },
+  { to: "/history-taking", label: "History Forms" },
   { to: "/ai-assistant", label: "AI Assistant" },
   { to: "/quizzes", label: "BCQs" },
   { to: "/notes", label: "Notes" },
