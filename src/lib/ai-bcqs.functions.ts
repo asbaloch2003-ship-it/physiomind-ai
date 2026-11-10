@@ -9,50 +9,72 @@ const Question = z.object({
   answer: z.number().int().min(0).max(3),
   explanation: z.string().min(15),
 });
+type QuizQuestion = z.infer<typeof Question>;
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
   .handler(async ({ data }) => {
     enforceAiRateLimit("bcqs", 12);
     const key = process.env.GEMINI_API_KEY;
-    if (!key) throw new Error("AI is not configured.");
-    const preferred = process.env.GEMINI_MODEL || "gemini-3.8-flash";
-    if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid model configuration.");
-    const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
-    let lastError = "AI is temporarily unavailable.";
-    for (const model of models) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 28000);
-      try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
-          method: "POST", signal: controller.signal,
-          headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Cover different subtopics and difficulty levels. Keep questions under 25 words and each explanation under 35 words. Avoid reusing previous questions or near-paraphrases when supplied. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
-            contents: [{ role: "user", parts: [{ text: "Generate " + data.count + " NEW topic-specific BCQs on: " + data.topic + ". Unique attempt: " + (data.attemptId || "new") + ". Do not repeat or closely paraphrase any of these previous questions: " + JSON.stringify(data.previousQuestions || []) }] }],
-            generationConfig: { maxOutputTokens: 3800, temperature: 0.65, responseMimeType: "application/json" },
-          }),
-        });
-        if (!response.ok) {
-          if ([400, 404, 429, 500, 502, 503, 504].includes(response.status)) { lastError = response.status === 503 ? "The AI service is overloaded (HTTP 503). Please retry in a minute." : response.status === 429 ? "AI free-tier request limit reached (HTTP 429). Please wait before retrying." : "AI model unavailable (HTTP " + response.status + ")."; continue; }
-          if ([401, 403].includes(response.status)) throw new Error("AI access denied. Check server API configuration.");
-          throw new Error("AI request failed (HTTP " + response.status + ").");
+    if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
+    const configured = process.env.GEMINI_MODEL;
+    if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
+    // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
+    const models = [...new Set([configured || "gemini-2.5-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"])];
+    const questions: QuizQuestion[] = [];
+    const seen = new Set((data.previousQuestions || []).map(normalized));
+    let lastError = "The AI service is temporarily unavailable.";
+
+    // Two smaller calls are less demanding than one large 10-question response.
+    for (let batch = 0; batch < 2; batch++) {
+      let completed = false;
+      for (const model of models) {
+        if (completed) break;
+        for (let retry = 0; retry < 2; retry++) {
+          if (retry) await pause(1200);
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 24000);
+          try {
+            const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
+              method: "POST", signal: controller.signal,
+              headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+              body: JSON.stringify({
+                systemInstruction: { parts: [{ text: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with questions array. Each item must have question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). Questions should be distinct, clinically safe, and appropriate to the topic. Each explanation must be concise. Avoid invented references." }] },
+                contents: [{ role: "user", parts: [{ text: "Topic: " + data.topic + ". Attempt: " + (data.attemptId || "new") + ". Batch " + (batch + 1) + ". Create 5 NEW questions not duplicating these: " + JSON.stringify([...(data.previousQuestions || []).slice(-15), ...questions.map(q => q.question)].slice(-25)) }] }],
+                generationConfig: { maxOutputTokens: 2300, temperature: 0.8, responseMimeType: "application/json" },
+              }),
+            });
+            if (!response.ok) {
+              if ([401, 403].includes(response.status)) throw new Error("Gemini API access denied. Check the server API key and permissions.");
+              if (response.status === 429) {
+                lastError = "Gemini request quota reached (HTTP 429). Please wait and try again.";
+                // Switching models does not reliably bypass project-level quota.
+                break;
+              }
+              if ([400, 404].includes(response.status)) { lastError = "Configured AI model unsupported (HTTP " + response.status + ")."; break; }
+              if ([500, 502, 503, 504].includes(response.status)) { lastError = "Gemini is temporarily overloaded (HTTP " + response.status + ")."; continue; }
+              throw new Error("AI request failed (HTTP " + response.status + ").");
+            }
+            const result = await response.json() as GeminiResponse;
+            const raw = result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
+            if (!raw) { lastError = "AI returned an empty question set."; continue; }
+            const parsed = z.object({ questions: z.array(Question).length(5) }).safeParse(JSON.parse(raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")));
+            if (!parsed.success) { lastError = "AI returned an incomplete question set."; continue; }
+            const fresh = parsed.data.questions.filter(q => !seen.has(normalized(q.question)));
+            if (fresh.length !== 5 || new Set(fresh.map(q => normalized(q.question))).size !== 5) { lastError = "AI repeated questions; retrying."; continue; }
+            for (const q of fresh) { questions.push(q); seen.add(normalized(q.question)); }
+            completed = true;
+            break;
+          } catch (error) {
+            if (error instanceof Error && error.message.startsWith("Gemini API access denied")) throw error;
+            lastError = controller.signal.aborted ? "Gemini timed out while generating questions." : error instanceof SyntaxError ? "AI returned invalid JSON." : error instanceof Error ? error.message : "AI request failed.";
+          } finally { clearTimeout(timer); }
         }
-        const result = await response.json() as GeminiResponse;
-        const raw = result.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("").trim();
-        if (!raw) { lastError = "AI returned no questions."; continue; }
-        const cleaned = raw.replace(/^\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60$/, "");
-        try {
-          const parsed = z.object({ questions: z.array(Question).length(10) }).parse(JSON.parse(cleaned));
-          const unique = new Set(parsed.questions.map(q => q.question.toLowerCase().replace(/[^a-z0-9]/g, "")));
-          if (unique.size !== 10) { lastError = "AI returned repeated questions. Please try again."; continue; }
-          return { questions: parsed.questions, topic: data.topic };
-        } catch { lastError = "AI returned an incomplete question set. Please try again."; }
-      } catch (e) {
-        if (controller.signal.aborted) { lastError = "The AI service timed out while generating 10 questions. Please retry shortly."; continue; }
-        throw e;
-      } finally { clearTimeout(timer); }
+      }
+      if (!completed) throw new Error(lastError + " Please retry shortly; no incomplete quiz was shown.");
     }
-    throw new Error(lastError);
+    return { questions, topic: data.topic };
   });
