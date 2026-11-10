@@ -27,7 +27,7 @@ function Page() {
   const prompt = activeTopic ? `Explain ${activeTopic} in the context of ${course?.name} for a DPT student. Give key concepts, a clinical example, and a self-test question.` : `Teach me ${course?.name || "physiotherapy"} with a clinical example and self-test question.`;
   const tutorSearch = (t: string) => ({topic:t,subject:course?.name || "",semester:String(course?.semester || ""),auto:"1"});
   return <>
-    <PageHeader eyebrow="Learn • Recall • Apply" title="Interactive DPT Study" desc="Select your semester and subject, explore curriculum topics, test your recall, and ask Gemini for deeper explanations. No login required." />
+    <PageHeader eyebrow="Learn • Recall • Apply" title="Interactive DPT Study" desc="Select your semester and subject, explore curriculum topics, test your recall, and ask AI for deeper explanations. No login required." />
     <Container>
       <SourceReference />
       <div className="mb-8 grid gap-4 rounded-xl border bg-card p-5 md:grid-cols-2">
