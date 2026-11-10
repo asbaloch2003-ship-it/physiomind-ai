@@ -16,7 +16,7 @@ export const submitFeedback = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     if (data.website) return { success: true };
     enforceAiRateLimit("feedback", 15, 60_000);
-    const url = process.env.SUPABASE_URL;
+    const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) throw new Error("Feedback collection is not configured yet. Please contact the project team.");
     let endpoint: URL;
@@ -31,9 +31,9 @@ export const submitFeedback = createServerFn({ method: "POST" })
       throw new Error("Feedback database connection is misconfigured. Please contact the project team.");
     }
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), 12000);
     try {
-      const response = await fetch(url.replace(/\/$/, "") + "/rest/v1/project_feedback", {
+      const response = await fetch(endpoint.toString(), {
         method: "POST",
         signal: controller.signal,
         headers: {
@@ -58,5 +58,9 @@ export const submitFeedback = createServerFn({ method: "POST" })
         throw new Error("Unable to save feedback right now. Please try again later.");
       }
       return { success: true };
+    } catch (error) {
+      if (error instanceof Error && (error.message.startsWith("Unable to save feedback") || error.message.startsWith("AI request limit"))) throw error;
+      console.error("Feedback connection failure", { reason: controller.signal.aborted ? "timeout" : "network_or_runtime" });
+      throw new Error(controller.signal.aborted ? "Feedback server timed out. Please retry shortly." : "Feedback database connection failed. Please retry; if this continues, contact the project team.");
     } finally { clearTimeout(timer); }
   });
