@@ -24,7 +24,7 @@ function Page() {
   const material = studyMaterials.find(m => m.courseId === selected);
   const topics = course ? getCurriculumTopics(course.id).map(t => t.title) : [];
   const activeTopic = topics[topic];
-  const prompt = activeTopic ? `Explain ${activeTopic} in the context of ${course?.name} for a DPT student. Give key concepts, a clinical example, and a self-test question.` : `Teach me ${course?.name || "physiotherapy"} with a clinical example and self-test question.`;
+  const prompt = activeTopic ? `Explain ${activeTopic} in the context of ${course?.name} for a DPT student. Give key concepts, relevant examples, and a short self-test question. Only include clinical applications when appropriate to the subject.` : `Teach me ${course?.name || "physiotherapy"} with relevant examples and a self-test question.`;
   const tutorSearch = (t: string) => ({topic:t,subject:course?.name || "",semester:String(course?.semester || ""),auto:"1"});
   return <>
     <PageHeader eyebrow="Learn • Recall • Apply" title="Interactive DPT Study" desc="Select your semester and subject, explore curriculum topics, test your recall, and ask AI for deeper explanations. No login required." />
