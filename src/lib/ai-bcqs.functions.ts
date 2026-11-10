@@ -13,6 +13,22 @@ type QuizQuestion = z.infer<typeof Question>;
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
+type ModelListing = { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
+async function availableModels(key: string): Promise<string[]> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", {
+      headers: { "x-goog-api-key": key }, signal: controller.signal,
+    });
+    if (!response.ok) return [];
+    const listing = await response.json() as ModelListing;
+    return (listing.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
+      .map(m => (m.name || "").replace(/^models\//, ""));
+  } catch { return []; }
+  finally { clearTimeout(timer); }
+}
 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
@@ -23,7 +39,12 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     const configured = process.env.GEMINI_MODEL;
     if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
-    const models = [...new Set([configured || "gemini-2.5-flash-lite", "gemini-2.5-flash-lite", "gemini-2.5-flash"])];
+    const discovered = await availableModels(key);
+    const preferred = [configured, "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"].filter((m): m is string => !!m);
+    const models = discovered.length
+      ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m))])]
+      : [...new Set(preferred)];
+    if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
     const questions: QuizQuestion[] = [];
     const seen = new Set((data.previousQuestions || []).map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
@@ -54,7 +75,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
                 // Switching models does not reliably bypass project-level quota.
                 break;
               }
-              if ([400, 404].includes(response.status)) { lastError = "Configured AI model unsupported (HTTP " + response.status + ")."; break; }
+              if ([400, 404].includes(response.status)) { lastError = "Model " + model + " is not available to this API key (HTTP " + response.status + ")."; break; }
               if ([500, 502, 503, 504].includes(response.status)) { lastError = "Gemini is temporarily overloaded (HTTP " + response.status + ")."; continue; }
               throw new Error("AI request failed (HTTP " + response.status + ").");
             }
@@ -74,7 +95,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           } finally { clearTimeout(timer); }
         }
       }
-      if (!completed) throw new Error(lastError + " Please retry shortly; no incomplete quiz was shown.");
+      if (!completed) throw new Error(lastError + " No incomplete quiz was shown. If this persists, check the Gemini API key and model access in Google AI Studio.");
     }
     return { questions, topic: data.topic };
   });
