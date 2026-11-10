@@ -31,12 +31,12 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
-    const attempts = [models[0], models[1], models[0]];
+    const attempts = [models[0], models[1]];
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
       if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 900 * attempt));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 16000);
+      const timer = setTimeout(() => controller.abort(), 22000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
