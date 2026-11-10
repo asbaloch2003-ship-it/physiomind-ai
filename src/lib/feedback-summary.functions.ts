@@ -13,7 +13,7 @@ export const getFeedbackSummary = createServerFn({ method: "GET" }).handler(asyn
     // Only rating is fetched. No comments, email addresses or identifiers are returned to visitors.
     for (let offset = 0; offset < 100000; offset += 1000) {
       const response = await fetch(endpoint.toString(), {
-        headers: { apikey: key, Authorization: "Bearer " + key, Range: `${offset}-${offset + 999}` },
+        headers: { apikey: key, ...(key.startsWith("sb_secret_") ? {} : { Authorization: "Bearer " + key }), Range: `${offset}-${offset + 999}` },
         signal: AbortSignal.timeout(8000),
         cache: "no-store",
       });
