@@ -23,6 +23,10 @@ function Page() {
   const [subject,setSubject] = useState(search.course ?? "all");
   const [topic,setTopic] = useState("");
   const [generating,setGenerating] = useState(false);
+  const [cooldownUntil,setCooldownUntil] = useState(0);
+  const [clock,setClock] = useState(Date.now());
+  useEffect(()=>{if(cooldownUntil<=Date.now())return;const timer=setInterval(()=>setClock(Date.now()),1000);return()=>clearInterval(timer);},[cooldownUntil]);
+  const waitSeconds=Math.max(0,Math.ceil((cooldownUntil-clock)/1000));
   const [error,setError] = useState("");
   const [questions,setQuestions] = useState<Question[]>([]);
   const [answers,setAnswers] = useState<Record<number,number>>({});
@@ -34,7 +38,7 @@ function Page() {
   useEffect(()=>{setTopic("");setQuestions([]);setAnswers({});setError("");},[subject,semester]);
   async function generateQuiz() {
     const current=topic.trim();
-    if(current.length<3||generating)return;
+    if(current.length<3||generating||Date.now()<cooldownUntil)return;
     setGenerating(true);setError("");
     const key=subject+"::"+current.toLowerCase();
     const previous=history[key]||[];
@@ -44,7 +48,8 @@ function Page() {
       if(incoming.length!==10)throw new Error("The quiz was incomplete. Please generate again.");
       setQuestions(incoming);setAnswers({});setActiveTopic(current);setAttempt(n=>n+1);
       setHistory(h=>({...h,[key]:[...(h[key]||[]),...incoming.map(q=>q.question)].slice(-40)}));
-    }catch(e){setError(e instanceof Error?e.message:"Unable to generate BCQs. Please try again.");}
+      setCooldownUntil(Date.now()+45000);setClock(Date.now());
+    }catch(e){const message=e instanceof Error?e.message:"Unable to generate BCQs. Please try again.";setError(message);if(/503|429|overload|limit|timed out/i.test(message)){setCooldownUntil(Date.now()+60000);setClock(Date.now());}}
     finally{setGenerating(false);}
   }
   const answered=Object.keys(answers).length;
@@ -67,12 +72,12 @@ function Page() {
             <input value={topic} onChange={e=>setTopic(e.target.value)} maxLength={140} placeholder="e.g. Rotator cuff muscles, gait cycle" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 font-normal"/>
           </label>
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating 10 BCQs…":questions.length?"Generate new 10 BCQs":"Generate 10 BCQs"}</Button><span className="text-sm text-muted-foreground">10 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"}</span></div>
+        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||waitSeconds>0||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating 10 BCQs…":waitSeconds>0?"Try again in "+waitSeconds+"s":questions.length?"Generate new 10 BCQs":"Generate 10 BCQs"}</Button><span className="text-sm text-muted-foreground">10 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"} · A short pause between attempts helps avoid AI overload</span></div>
         {error&&<p role="alert" className="mt-4 rounded-lg border border-destructive p-3 text-sm text-destructive">{error}</p>}
       </section>
       {questions.length>0&&<section className="mt-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4"><div><h2 className="text-xl font-bold">{activeTopic}</h2><p className="text-sm text-muted-foreground">Attempt {attempt} · 10 BCQs</p></div><strong aria-live="polite">Score: {correct} / {answered} answered</strong></div>
         <div className="space-y-5">{questions.map((q,i)=><article key={i} className="rounded-xl border bg-card p-5"><h3 className="font-semibold">{i+1}. {q.question}</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{q.options.map((option,j)=><button type="button" key={j} disabled={answers[i]!==undefined} onClick={()=>setAnswers(a=>({...a,[i]:j}))} className={`rounded-lg border p-3 text-left text-sm disabled:cursor-default ${answers[i]===undefined?"hover:bg-secondary":j===q.answer?"border-success bg-success-soft":answers[i]===j?"border-destructive bg-destructive/5":"opacity-65"}`}>{String.fromCharCode(65+j)}. {option}</button>)}</div>{answers[i]!==undefined&&<div className="mt-3 rounded-lg bg-secondary p-3 text-sm"><strong>{answers[i]===q.answer?"Correct!":"Correct answer: "+q.options[q.answer]}</strong><p className="mt-1 text-muted-foreground">{q.explanation}</p></div>}</article>)}</div>
-        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4"><strong>{answered===10?"Completed: ":"Progress: "}{correct} correct out of {answered} answered</strong><Button variant="outline" disabled={generating} onClick={generateQuiz}>New attempt — different 10 BCQs</Button></div>
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4"><strong>{answered===10?"Completed: ":"Progress: "}{correct} correct out of {answered} answered</strong><Button variant="outline" disabled={generating||waitSeconds>0} onClick={generateQuiz}>{waitSeconds>0?"New attempt in "+waitSeconds+"s":"New attempt — different 10 BCQs"}</Button></div>
         <p className="mt-4 text-xs text-muted-foreground">Questions are generated by AI and may contain errors. Recent questions from this session are supplied to discourage repeats; uniqueness cannot be guaranteed indefinitely.</p>
       </section>}
       <div className="mt-9"><SourceReference/></div>
