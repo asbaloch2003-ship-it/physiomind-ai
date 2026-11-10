@@ -39,7 +39,7 @@ export const submitFeedback = createServerFn({ method: "POST" })
         headers: {
           "Content-Type": "application/json",
           apikey: key,
-          Authorization: "Bearer " + key,
+          ...(key.startsWith("sb_secret_") ? {} : { Authorization: "Bearer " + key }),
           Prefer: "return=minimal",
         },
         body: JSON.stringify({
