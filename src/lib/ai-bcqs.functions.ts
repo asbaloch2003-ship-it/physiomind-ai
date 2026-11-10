@@ -23,19 +23,19 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     let lastError = "AI is temporarily unavailable.";
     for (const model of models) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 22000);
+      const timer = setTimeout(() => controller.abort(), 28000);
       try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
           method: "POST", signal: controller.signal,
           headers: { "Content-Type": "application/json", "x-goog-api-key": key },
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Cover different subtopics and difficulty levels. Avoid reusing previous questions or near-paraphrases when supplied. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
+            systemInstruction: { parts: [{ text: 'Write accurate educational DPT single-best-answer questions. Return only JSON with a questions array. Each question has question (string), options (exactly four strings), answer (zero-based integer index of the correct option), explanation (short teaching rationale). Generate exactly ' + data.count + ' distinct questions. Cover different subtopics and difficulty levels. Keep questions under 25 words and each explanation under 35 words. Avoid reusing previous questions or near-paraphrases when supplied. Use plausible distractors. No Markdown fences, fabricated references or unsupported clinical certainty.' }] },
             contents: [{ role: "user", parts: [{ text: "Generate " + data.count + " NEW topic-specific BCQs on: " + data.topic + ". Unique attempt: " + (data.attemptId || "new") + ". Do not repeat or closely paraphrase any of these previous questions: " + JSON.stringify(data.previousQuestions || []) }] }],
-            generationConfig: { maxOutputTokens: 5500, temperature: 0.95, responseMimeType: "application/json" },
+            generationConfig: { maxOutputTokens: 3800, temperature: 0.65, responseMimeType: "application/json" },
           }),
         });
         if (!response.ok) {
-          if ([400, 404, 429, 500, 502, 503, 504].includes(response.status)) { lastError = "AI model unavailable (HTTP " + response.status + ")."; continue; }
+          if ([400, 404, 429, 500, 502, 503, 504].includes(response.status)) { lastError = response.status === 503 ? "The AI service is overloaded (HTTP 503). Please retry in a minute." : response.status === 429 ? "AI free-tier request limit reached (HTTP 429). Please wait before retrying." : "AI model unavailable (HTTP " + response.status + ")."; continue; }
           if ([401, 403].includes(response.status)) throw new Error("AI access denied. Check server API configuration.");
           throw new Error("AI request failed (HTTP " + response.status + ").");
         }
@@ -50,7 +50,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           return { questions: parsed.questions, topic: data.topic };
         } catch { lastError = "AI returned an incomplete question set. Please try again."; }
       } catch (e) {
-        if (controller.signal.aborted) { lastError = "AI took too long to generate questions."; continue; }
+        if (controller.signal.aborted) { lastError = "The AI service timed out while generating 10 questions. Please retry shortly."; continue; }
         throw e;
       } finally { clearTimeout(timer); }
     }
