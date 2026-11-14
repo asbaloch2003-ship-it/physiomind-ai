@@ -30,8 +30,8 @@ async function discoverModels(key: string): Promise<string[]> {
     if (!response.ok) return [];
     const data = await response.json() as ModelListing;
     const names = (data.models || [])
-      .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
-      .map(m => (m.name || "").replace(/^models\\//, ""));
+      .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
+      .map(m => (m.name || "").replace(/^models\//, ""));
     if (names.length) cachedModels = { key, names, expires: Date.now() + 600_000 };
     return names;
   } catch { return []; }
