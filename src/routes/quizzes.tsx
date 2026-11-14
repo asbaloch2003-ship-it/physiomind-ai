@@ -11,7 +11,7 @@ import { learningSearch } from "@/lib/study-materials";
 
 type Question = {question:string;options:string[];answer:number;explanation:string};
 export const Route = createFileRoute("/quizzes")({
-  head: () => meta("Topic-wise BCQs & Quizzes", "Generate ten fresh best-choice questions per DPT curriculum topic and retry with a new set."),
+  head: () => meta("Topic-wise BCQs & Quizzes", "Generate 25 fresh best-choice questions per DPT curriculum topic and retry with a new set."),
   validateSearch: learningSearch,
   component: Page,
 });
@@ -33,6 +33,7 @@ function Page() {
   const [attempt,setAttempt] = useState(0);
   const [history,setHistory] = useState<Record<string,string[]>>({});
   const [activeTopic,setActiveTopic] = useState("");
+  const [printAnswers,setPrintAnswers] = useState(true);
   const topics = subject==="all"?[]:getCurriculumTopics(subject);
   const selectedCourse = subject==="all"?undefined:getCourse(subject);
   useEffect(()=>{setTopic("");setQuestions([]);setAnswers({});setError("");},[subject,semester]);
@@ -43,9 +44,9 @@ function Page() {
     const key=subject+"::"+current.toLowerCase();
     const previous=history[key]||[];
     try {
-      const result=await generate({data:{topic:(selectedCourse?selectedCourse.name+" — ":"")+current,count:10,previousQuestions:previous.slice(-40),attemptId:globalThis.crypto?.randomUUID?.()||String(Date.now())}});
+      const result=await generate({data:{topic:(selectedCourse?selectedCourse.name+" — ":"")+current,count:25,previousQuestions:previous.slice(-40),attemptId:globalThis.crypto?.randomUUID?.()||String(Date.now())}});
       const incoming=result.questions;
-      if(incoming.length!==10)throw new Error("The quiz was incomplete. Please generate again.");
+      if(incoming.length!==25)throw new Error("The quiz was incomplete. Please generate again.");
       setQuestions(incoming);setAnswers({});setActiveTopic(current);setAttempt(n=>n+1);
       setHistory(h=>({...h,[key]:[...(h[key]||[]),...incoming.map(q=>q.question)].slice(-40)}));
       setCooldownUntil(Date.now()+45000);setClock(Date.now());
@@ -55,11 +56,12 @@ function Page() {
   const answered=Object.keys(answers).length;
   const correct=questions.filter((q,i)=>answers[i]===q.answer).length;
   return <>
-    <PageHeader eyebrow="Exam practice" title="Topic-wise BCQs & Quizzes" desc="Choose a DPT subject and topic to generate 10 new single-best-answer questions per attempt. No fixed question bank." />
+    <PageHeader eyebrow="Exam practice" title="Topic-wise BCQs & Quizzes" desc="Choose a DPT subject and topic to generate 25 new single-best-answer questions per attempt. No fixed question bank." />
     <Container>
-      <section className="rounded-2xl border border-primary/20 bg-card p-5 shadow-sm sm:p-7">
+      <style>{`@media print { @page { size: A4; margin: 15mm; } header, nav, footer, .no-print { display: none !important; } .print-sheet { display: block !important; color: #111 !important; font-family: Georgia, serif; } .print-question { break-inside: avoid; margin-bottom: 15px; } .print-key { break-before: page; } body { background: white !important; } } @media screen { .print-sheet { display: none !important; } }`}</style>
+      <section className="no-print rounded-2xl border border-primary/20 bg-card p-5 shadow-sm sm:p-7">
         <h2 className="text-xl font-bold">Choose your topic</h2>
-        <p className="mt-2 text-sm text-muted-foreground">Select a semester, subject and topic from the curriculum, or enter a custom topic. Each new attempt generates a different set of 10 questions.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Select a semester, subject and topic from the curriculum, or enter a custom topic. Each new attempt generates a different set of 25 questions.</p>
         <div className="mt-5"><StudyFilters semester={semester} subject={subject} onSemester={setSemester} onSubject={setSubject}/></div>
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm font-semibold">Curriculum topic
@@ -72,15 +74,37 @@ function Page() {
             <input value={topic} onChange={e=>setTopic(e.target.value)} maxLength={140} placeholder="e.g. Rotator cuff muscles, gait cycle" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 font-normal"/>
           </label>
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||waitSeconds>0||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating 10 BCQs…":waitSeconds>0?"Try again in "+waitSeconds+"s":questions.length?"Generate new 10 BCQs":"Generate 10 BCQs"}</Button><span className="text-sm text-muted-foreground">10 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"} · A short pause between attempts helps avoid AI overload</span></div>
+        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||waitSeconds>0||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating 25 BCQs…":waitSeconds>0?"Try again in "+waitSeconds+"s":questions.length?"Generate new 25 BCQs":"Generate 25 BCQs"}</Button><span className="text-sm text-muted-foreground">25 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"} · A short pause between attempts helps avoid AI overload</span></div>
         {error&&<p role="alert" className="mt-4 rounded-lg border border-destructive p-3 text-sm text-destructive">{error}</p>}
       </section>
-      {questions.length>0&&<section className="mt-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4"><div><h2 className="text-xl font-bold">{activeTopic}</h2><p className="text-sm text-muted-foreground">Attempt {attempt} · 10 BCQs</p></div><strong aria-live="polite">Score: {correct} / {answered} answered</strong></div>
+      {questions.length>0&&<section className="no-print mt-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4"><div><h2 className="text-xl font-bold">{activeTopic}</h2><p className="text-sm text-muted-foreground">Attempt {attempt} · 25 BCQs</p></div><strong aria-live="polite">Score: {correct} / {answered} answered</strong></div>
         <div className="space-y-5">{questions.map((q,i)=><article key={i} className="rounded-xl border bg-card p-5"><h3 className="font-semibold">{i+1}. {q.question}</h3><div className="mt-3 grid gap-2 sm:grid-cols-2">{q.options.map((option,j)=><button type="button" key={j} disabled={answers[i]!==undefined} onClick={()=>setAnswers(a=>({...a,[i]:j}))} className={`rounded-lg border p-3 text-left text-sm disabled:cursor-default ${answers[i]===undefined?"hover:bg-secondary":j===q.answer?"border-success bg-success-soft":answers[i]===j?"border-destructive bg-destructive/5":"opacity-65"}`}>{String.fromCharCode(65+j)}. {option}</button>)}</div>{answers[i]!==undefined&&<div className="mt-3 rounded-lg bg-secondary p-3 text-sm"><strong>{answers[i]===q.answer?"Correct!":"Correct answer: "+q.options[q.answer]}</strong><p className="mt-1 text-muted-foreground">{q.explanation}</p></div>}</article>)}</div>
-        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4"><strong>{answered===10?"Completed: ":"Progress: "}{correct} correct out of {answered} answered</strong><Button variant="outline" disabled={generating||waitSeconds>0} onClick={generateQuiz}>{waitSeconds>0?"New attempt in "+waitSeconds+"s":"New attempt — different 10 BCQs"}</Button></div>
+        <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-4"><strong>{answered===25?"Completed: ":"Progress: "}{correct} correct out of {answered} answered</strong><Button variant="outline" disabled={generating||waitSeconds>0} onClick={generateQuiz}>{waitSeconds>0?"New attempt in "+waitSeconds+"s":"New attempt — different 25 BCQs"}</Button></div>
         <p className="mt-4 text-xs text-muted-foreground">Questions are generated by AI and may contain errors. Recent questions from this session are supplied to discourage repeats; uniqueness cannot be guaranteed indefinitely.</p>
       </section>}
-      <div className="mt-9"><SourceReference/></div>
+      {questions.length===25&&<div className="no-print mt-5 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={printAnswers} onChange={e=>setPrintAnswers(e.target.checked)}/> Include answer key and explanations</label>
+        <Button type="button" variant="outline" onClick={()=>window.print()}>Print / Save as PDF</Button>
+      </div>}
+      {questions.length===25&&<section className="print-sheet" aria-label="Printable BCQ paper">
+        <h1 style={{fontSize:"22px",fontWeight:700}}>PhysioSmart AI — Topic-wise BCQ Practice</h1>
+        <p>Topic: {activeTopic} | Attempt: {attempt} | Questions: 25</p>
+        <p>Name: __________________________ Date: ______________ Score: ______ / 25</p>
+        <hr style={{margin:"14px 0"}}/>
+        {questions.map((q,i)=><div key={i} className="print-question">
+          <p><strong>{i+1}. {q.question}</strong></p>
+          {q.options.map((option,j)=><p key={j} style={{margin:"3px 0 3px 14px"}}>{String.fromCharCode(65+j)}. {option}</p>)}
+        </div>)}
+        {printAnswers&&<div className="print-key">
+          <h2 style={{fontSize:"18px",fontWeight:700}}>Answer Key and Explanations</h2>
+          {questions.map((q,i)=><div key={i} className="print-question">
+            <p><strong>{i+1}. {String.fromCharCode(65+q.answer)} — {q.options[q.answer]}</strong></p>
+            <p>{q.explanation}</p>
+          </div>)}
+        </div>}
+        <p style={{fontSize:"10px"}}>AI-generated educational practice material. Verify clinical information with authoritative course resources.</p>
+      </section>}
+      <div className="no-print mt-9"><SourceReference/></div>
     </Container>
   </>;
 }
