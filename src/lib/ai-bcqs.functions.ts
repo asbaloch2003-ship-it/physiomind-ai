@@ -13,6 +13,9 @@ type QuizQuestion = z.infer<typeof Question>;
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
+const isTextModel = (name: string) =>
+  /^gemini-[a-zA-Z0-9._-]+$/.test(name) &&
+  !/(tts|audio|image|video|live|robotics|computer-use|embedding|native|speech|vision|realtime)/i.test(name);
 type ModelListing = { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
 let modelCache: { key: string; models: string[]; expires: number } | undefined;
 async function availableModels(key: string): Promise<string[]> {
@@ -27,7 +30,8 @@ async function availableModels(key: string): Promise<string[]> {
     const listing = await response.json() as ModelListing;
     const models = (listing.models || [])
       .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
-      .map(m => (m.name || "").replace(/^models\//, ""));
+      .map(m => (m.name || "").replace(/^models\//, ""))
+      .filter(isTextModel);
     if (models.length) modelCache = { key, models, expires: Date.now() + 10 * 60_000 };
     return models;
   } catch { return []; }
@@ -44,9 +48,9 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
     const discovered = await availableModels(key);
-    const preferred = [configured, "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-2.0-flash"].filter((m): m is string => !!m);
+    const preferred = ["gemini-2.5-flash-lite", "gemini-2.5-flash", configured].filter((m): m is string => !!m && isTextModel(m));
     const models = discovered.length
-      ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m))])]
+      ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m) && isTextModel(m))])]
       : [...new Set(preferred)];
     if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
     const questions: QuizQuestion[] = [];
