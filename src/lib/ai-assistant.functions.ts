@@ -52,9 +52,9 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash", preferred].filter(isTextModel);
+    const preferredModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash", preferred].filter(m => isTextModel(m) && !/preview|exp|experimental|tts/i.test(m));
     const models = available.length
-      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m))])]
+      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m) && !/preview|exp|experimental|tts/i.test(m))])]
       : [...new Set(preferredModels)];
     if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
@@ -83,12 +83,21 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         );
 
         if (!response.ok) {
+          // Preserve the provider's actual error category for diagnosis.
+          // Do not log user prompts, patient details, or API credentials.
+          const errorPayload = await response.json().catch(() => null) as { error?: { message?: string; status?: string } } | null;
+          const providerMessage = errorPayload?.error?.message || "";
+          console.error("PhysioSmart Gemini request failed", {
+            mode: data.mode, model, httpStatus: response.status,
+            providerStatus: errorPayload?.error?.status || "unknown",
+            reason: providerMessage.slice(0, 450).replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED]"),
+          });
           if ([429, 500, 502, 503, 504].includes(response.status)) {
             lastError = `Gemini model ${model} is busy (HTTP ${response.status}).`;
             continue;
           }
           if ([400, 404].includes(response.status)) {
-            lastError = `Gemini model ${model} is not supported for this request (HTTP ${response.status}).`;
+            lastError = `Gemini model ${model} rejected the request (HTTP ${response.status}; ${errorPayload?.error?.status || "INVALID_REQUEST"}). Check Vercel function logs for the exact provider reason.`;
             continue;
           }
           if ([401, 403].includes(response.status)) throw new Error("Gemini API access denied. Check the server API key and project permissions.");
