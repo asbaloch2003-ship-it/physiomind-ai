@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { enforceAiRateLimit } from "./ai-rate-limit";
 
-const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(10), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional() });
+const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(25), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional() });
 const Question = z.object({
   question: z.string().min(12),
   options: z.array(z.string().min(1)).length(4),
@@ -57,15 +57,15 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     const seen = new Set((data.previousQuestions || []).map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
 
-    // Two smaller calls are less demanding than one large 10-question response.
-    for (let batch = 0; batch < 2; batch++) {
+    // Generate 25 questions as five smaller batches to limit response size.
+    for (let batch = 0; batch < 5; batch++) {
       let completed = false;
-      for (const model of models) {
+      for (const model of models.slice(0, 2)) {
         if (completed) break;
         for (let retry = 0; retry < 2; retry++) {
           if (retry) await pause(500);
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 16000);
+          const timer = setTimeout(() => controller.abort(), 18000);
           try {
             const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
               method: "POST", signal: controller.signal,
@@ -73,7 +73,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
               body: JSON.stringify({
                 systemInstruction: { parts: [{ text: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with questions array. Each item must have question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). Questions should be distinct, clinically safe, and appropriate to the topic. Each explanation must be concise. Avoid invented references." }] },
                 contents: [{ role: "user", parts: [{ text: "Topic: " + data.topic + ". Attempt: " + (data.attemptId || "new") + ". Batch " + (batch + 1) + ". Create 5 NEW questions not duplicating these: " + JSON.stringify([...(data.previousQuestions || []).slice(-15), ...questions.map(q => q.question)].slice(-25)) }] }],
-                generationConfig: { maxOutputTokens: 1700, temperature: 0.7, responseMimeType: "application/json" },
+                generationConfig: { maxOutputTokens: 2200, temperature: 0.7, responseMimeType: "application/json" },
               }),
             });
             if (!response.ok) {
@@ -103,7 +103,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           } finally { clearTimeout(timer); }
         }
       }
-      if (!completed) throw new Error(lastError + " No incomplete quiz was shown. If this persists, check the Gemini API key and model access in Google AI Studio.");
+      if (!completed) throw new Error("Generated " + questions.length + " of 25 questions. " + lastError + " No incomplete quiz was shown. Please retry later.");
     }
     return { questions, topic: data.topic };
   });
