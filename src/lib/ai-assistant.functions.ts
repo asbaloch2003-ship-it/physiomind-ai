@@ -17,6 +17,27 @@ const guidance = {
 
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
 
+type ModelListing = { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
+let cachedModels: { key: string; names: string[]; expires: number } | undefined;
+async function discoverModels(key: string): Promise<string[]> {
+  if (cachedModels?.key === key && cachedModels.expires > Date.now()) return cachedModels.names;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000", {
+      headers: { "x-goog-api-key": key }, signal: controller.signal,
+    });
+    if (!response.ok) return [];
+    const data = await response.json() as ModelListing;
+    const names = (data.models || [])
+      .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
+      .map(m => (m.name || "").replace(/^models\\//, ""));
+    if (names.length) cachedModels = { key, names, expires: Date.now() + 600_000 };
+    return names;
+  } catch { return []; }
+  finally { clearTimeout(timer); }
+}
+
 export const askPhysioAI = createServerFn({ method: "POST" })
   .inputValidator((value: unknown) => Input.parse(value))
   .handler(async ({ data }) => {
@@ -26,17 +47,22 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const preferred = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
-    const models = [...new Set([preferred, "gemini-2.5-flash-lite", "gemini-2.5-flash"])];
+    const available = await discoverModels(key);
+    const preferredModels = [preferred, "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const models = available.length
+      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m))])]
+      : [...new Set(preferredModels)];
+    if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
-    const attempts = models.slice(0, 2);
+    const attempts = models.slice(0, 3);
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
       if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 350 * attempt));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 14000);
+      const timer = setTimeout(() => controller.abort(), 17000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
