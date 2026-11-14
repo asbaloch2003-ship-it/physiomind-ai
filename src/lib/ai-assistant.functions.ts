@@ -17,6 +17,9 @@ const guidance = {
 
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
 
+const isTextModel = (name: string) =>
+  /^gemini-[a-zA-Z0-9._-]+$/.test(name) &&
+  !/(tts|audio|image|video|live|robotics|computer-use|embedding|native|speech|vision|realtime)/i.test(name);
 type ModelListing = { models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
 let cachedModels: { key: string; names: string[]; expires: number } | undefined;
 async function discoverModels(key: string): Promise<string[]> {
@@ -31,7 +34,8 @@ async function discoverModels(key: string): Promise<string[]> {
     const data = await response.json() as ModelListing;
     const names = (data.models || [])
       .filter(m => m.supportedGenerationMethods?.includes("generateContent") && /^models\/gemini-[a-zA-Z0-9._-]+$/.test(m.name || ""))
-      .map(m => (m.name || "").replace(/^models\//, ""));
+      .map(m => (m.name || "").replace(/^models\//, ""))
+      .filter(isTextModel);
     if (names.length) cachedModels = { key, names, expires: Date.now() + 600_000 };
     return names;
   } catch { return []; }
@@ -48,9 +52,9 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = [preferred, "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+    const preferredModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash", preferred].filter(isTextModel);
     const models = available.length
-      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m))])]
+      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m))])]
       : [...new Set(preferredModels)];
     if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
