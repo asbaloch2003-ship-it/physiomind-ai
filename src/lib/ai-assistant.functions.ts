@@ -23,20 +23,20 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
-    const preferred = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+    const preferred = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
-    const models = [...new Set([preferred, "gemini-3.5-flash-lite"])];
+    const models = [...new Set([preferred, "gemini-2.5-flash-lite", "gemini-2.5-flash"])];
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
-    const attempts = [models[0], models[1]];
+    const attempts = models.slice(0, 2);
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
-      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 900 * attempt));
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 350 * attempt));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 22000);
+      const timer = setTimeout(() => controller.abort(), 14000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
