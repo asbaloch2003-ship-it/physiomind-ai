@@ -52,7 +52,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = ["gemini-2.5-flash-lite", "gemini-2.5-flash", preferred].filter(m => isTextModel(m) && !/preview|exp|experimental|tts/i.test(m));
+    const preferredModels = ["gemini-flash-latest", "gemini-2.5-flash-lite", preferred].filter(m => isTextModel(m) && !/preview|exp|experimental|tts/i.test(m));
     const models = available.length
       ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m) && !/preview|exp|experimental|tts/i.test(m))])]
       : [...new Set(preferredModels)];
@@ -63,6 +63,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
 
     const attempts = models.slice(0, 2);
     let overloaded = false;
+    let sawUnsupportedModel = false;
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
       if (attempt > 0) await new Promise(resolve => setTimeout(resolve, overloaded ? 1400 : 350));
@@ -102,6 +103,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             continue;
           }
           if ([400, 404].includes(response.status)) {
+            sawUnsupportedModel = true;
             lastError = `Gemini model ${model} rejected the request (HTTP ${response.status}; ${errorPayload?.error?.status || "INVALID_REQUEST"}). Check Vercel function logs for the exact provider reason.`;
             continue;
           }
@@ -124,5 +126,8 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         clearTimeout(timer);
       }
     }
-    throw new Error("The AI service could not complete this request. Your input is preserved. " + lastError);
+    const summary = overloaded && sawUnsupportedModel
+      ? "Gemini is overloaded and some fallback models are unavailable. Please retry later."
+      : lastError;
+    throw new Error("The AI service could not complete this request. Your input is preserved. " + summary);
   });
