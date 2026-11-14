@@ -61,12 +61,13 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
-    const attempts = models.slice(0, 3);
+    const attempts = models.slice(0, 2);
+    let overloaded = false;
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
-      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, 350 * attempt));
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, overloaded ? 1400 : 350));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 17000);
+      const timer = setTimeout(() => controller.abort(), 18000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -93,7 +94,11 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             reason: providerMessage.slice(0, 450).replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED]"),
           });
           if ([429, 500, 502, 503, 504].includes(response.status)) {
-            lastError = `Gemini model ${model} is busy (HTTP ${response.status}).`;
+            overloaded = true;
+            lastError = response.status === 429
+              ? "Gemini API quota has been reached (HTTP 429). Wait before requesting again."
+              : "Gemini is experiencing high demand (HTTP " + response.status + "). Try again shortly.";
+            if (response.status === 429) break;
             continue;
           }
           if ([400, 404].includes(response.status)) {
@@ -119,5 +124,5 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         clearTimeout(timer);
       }
     }
-    throw new Error("The AI service is temporarily unavailable. Your case details are still in the form. Please try again in a moment. (" + lastError + ")");
+    throw new Error("The AI service could not complete this request. Your input is preserved. " + lastError);
   });
