@@ -126,7 +126,7 @@ function Page(){
     finally{setBusy(false);}
   }
   return <>
-    <PageHeader eyebrow="DPT learning library" title="Semester-wise Study Notes" desc="Choose a semester, subject and topic to generate simple, easy-to-understand notes. Browse the expanded HEC course topic index and generate detailed explanations for selected topics."/>
+    <style>{`@media print { @page { size: A4; margin: 15mm; } body * { visibility: hidden !important; } .notes-print-content, .notes-print-content * { visibility: visible !important; } .notes-print-content { position: absolute !important; top: 0; left: 0; width: 100%; border: 0 !important; box-shadow: none !important; padding: 0 !important; background: white !important; color: #111 !important; } .notes-print-actions, .notes-print-actions * { display: none !important; } .notes-print-content article > div { break-inside: avoid; } } `}</style><PageHeader eyebrow="DPT learning library" title="Semester-wise Study Notes" desc="Choose a semester, subject and topic to generate simple, easy-to-understand notes. Browse the expanded HEC course topic index and generate detailed explanations for selected topics."/>
     <Container>
       <SourceReference/>
       <StudyFilters semester={semester} subject={subject} onSemester={v=>{setSemester(v);setSubject("all");setAnswer("");}} onSubject={v=>{setSubject(v);setAnswer("");}}/>
@@ -138,7 +138,7 @@ function Page(){
         </Card>
         {busy&&<p role="status">Preparing your notes…</p>}
         {error&&<p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{error}</p>}
-        {answer&&<Card><header className="mb-7 rounded-xl border border-slate-200 bg-slate-50 px-5 py-6"><p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-700">PhysioSmart AI · Study Notes</p><h2 className="text-2xl font-bold tracking-tight text-slate-950">{topic}</h2><p className="mt-2 text-sm text-slate-600">{course.name} · Semester {course.semester}</p></header><NotesText value={answer}/><div className="mt-5 flex gap-2 border-t pt-4"><Button variant="outline" onClick={()=>navigator.clipboard?.writeText(answer)}>Copy notes</Button><Button variant="outline" onClick={()=>window.print()}>Print</Button></div><p className="mt-3 text-xs text-muted-foreground">AI-generated study notes; verify important facts with textbooks and instructors.</p></Card>}
+        {answer&&<div className="notes-print-content"><Card><header className="mb-7 rounded-xl border border-slate-200 bg-slate-50 px-5 py-6"><p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-700">PhysioSmart AI · Study Notes</p><h2 className="text-2xl font-bold tracking-tight text-slate-950">{topic}</h2><p className="mt-2 text-sm text-slate-600">{course.name} · Semester {course.semester}</p></header><NotesText value={answer}/><div className="notes-print-actions mt-5 flex gap-2 border-t pt-4"><Button variant="outline" onClick={()=>navigator.clipboard?.writeText(answer)}>Copy Text</Button><Button variant="outline" onClick={()=>window.print()}>Save as PDF</Button></div><p className="mt-3 text-xs text-muted-foreground">AI-generated study notes; verify important facts with textbooks and instructors.</p></Card></div>}
       </div>}
     </Container>
   </>;
