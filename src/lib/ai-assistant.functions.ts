@@ -58,11 +58,11 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
-    const preferred = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+    const preferred = "gemini-3.5-flash-lite";
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = [...new Set([preferred, ...["gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash"]])].filter(isTextModel);
+    const preferredModels = [preferred, "gemini-3.5-flash", "gemini-3.8-flash"];
     const models = available.length ? preferredModels.filter(m => available.includes(m)) : preferredModels;
     if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
@@ -77,7 +77,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
       const model = attempts[attempt];
       if (attempt > 0) await new Promise(resolve => setTimeout(resolve, overloaded ? 1400 : 350));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), data.mode === "notes" ? 32000 : 30000);
+      const timer = setTimeout(() => controller.abort(), data.mode === "notes" ? 28000 : 24000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -104,7 +104,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             reason: providerMessage.slice(0, 450).replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED]"),
           });
           if ([429, 500, 502, 503, 504].includes(response.status)) {
-            if (response.status === 503) geminiBusyUntil = Date.now() + 60_000;
+            if (response.status === 503 && attempt === attempts.length - 1) geminiBusyUntil = Date.now() + 30_000;
             overloaded = true;
             lastError = response.status === 429
               ? "Gemini API quota has been reached (HTTP 429). Wait before requesting again."
