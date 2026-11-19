@@ -11,7 +11,7 @@ const Question = z.object({
 });
 type QuizQuestion = z.infer<typeof Question>;
 type GroqResponse = { choices?: Array<{ message?: { content?: string } }> };
-const GROQ_MODEL = "llama-3.1-8b-instant";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
@@ -48,7 +48,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
             console.error("PhysioSmart Groq BCQ failed", { httpStatus: response.status, reason: (payload?.error?.message || "").slice(0, 250) });
             if (response.status === 429) throw new Error("Groq free-tier rate limit reached (HTTP 429). Please wait before retrying.");
             if ([401, 403].includes(response.status)) throw new Error("Groq API key rejected. Check GROQ_API_KEY in Vercel.");
-            lastError = "Groq request failed (HTTP " + response.status + ").";
+            lastError = "Groq request failed (HTTP " + response.status + "): " + (payload?.error?.message || "Unknown provider error").slice(0, 240);
             continue;
           }
           const result = await response.json() as GroqResponse;
