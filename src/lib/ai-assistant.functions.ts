@@ -68,14 +68,15 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
-    const attempts = models.slice(0, 2);
+    // Long notes should not start a second full generation inside the same serverless invocation.
+    const attempts = models.slice(0, data.mode === "notes" ? 1 : 2);
     let overloaded = false;
     let sawUnsupportedModel = false;
     for (let attempt = 0; attempt < attempts.length; attempt++) {
       const model = attempts[attempt];
       if (attempt > 0) await new Promise(resolve => setTimeout(resolve, overloaded ? 1400 : 350));
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 18000);
+      const timer = setTimeout(() => controller.abort(), data.mode === "notes" ? 27000 : 22000);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
@@ -86,7 +87,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             body: JSON.stringify({
               systemInstruction: { parts: [{ text: prompt }] },
               contents: [{ role: "user", parts: [{ text: data.question }] }],
-              generationConfig: { maxOutputTokens: data.mode === "notes" ? 3500 : data.mode === "study" ? 2600 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 800) : 1200 },
+              generationConfig: { maxOutputTokens: data.mode === "notes" ? 2300 : data.mode === "study" ? 1900 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 800) : 1200 },
             }),
           },
         );
@@ -132,7 +133,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         lastError = `Gemini model ${model} returned no usable answer.`;
       } catch (error) {
         if (controller.signal.aborted) {
-          lastError = `Gemini model ${model} timed out.`;
+          lastError = `Gemini model ${model} did not respond within the request time limit. Try a narrower topic or retry later.`;
           continue;
         }
         if (error instanceof Error && error.message.startsWith("Gemini API access denied")) throw error;
