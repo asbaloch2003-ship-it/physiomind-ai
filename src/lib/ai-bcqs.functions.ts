@@ -42,6 +42,15 @@ async function selectGroqModel(key: string): Promise<string> {
   return alternative;
 }
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
+function parseQuestions(raw: string): unknown {
+  const clean = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "");
+  try { return JSON.parse(clean); } catch {
+    const first = clean.indexOf("{");
+    const last = clean.lastIndexOf("}");
+    if (first < 0 || last <= first) throw new Error("AI returned invalid JSON.");
+    return JSON.parse(clean.slice(first, last + 1));
+  }
+}
 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => Input.parse(input))
@@ -57,7 +66,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     // Generate 25 questions as five smaller batches to limit response size.
     for (let batch = 0; batch < 5; batch++) {
       let completed = false;
-      for (let retry = 0; retry < 2 && !completed; retry++) {
+      for (let retry = 0; retry < 3 && !completed; retry++) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 25000);
         try {
@@ -65,10 +74,9 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
             method: "POST", signal: controller.signal,
             headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
             body: JSON.stringify({
-              model, temperature: 0.65, max_completion_tokens: 2200,
-              response_format: { type: "json_object" },
+              model, temperature: 0.25, max_completion_tokens: 2500,
               messages: [
-                { role: "system", content: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with a questions array. Each item has question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). All questions must be distinct, clinically safe, and appropriate to the topic. Avoid invented references." },
+                { role: "system", content: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY valid JSON (no Markdown fences or commentary) with a questions array. Each item has question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). All questions must be distinct, clinically safe, and appropriate to the topic. Avoid invented references." },
                 { role: "user", content: "Topic: " + data.topic + ". Attempt: " + (data.attemptId || "new") + ". Batch " + (batch + 1) + ". Create 5 NEW questions not duplicating these: " + JSON.stringify([...(data.previousQuestions || []).slice(-15), ...questions.map(q => q.question)].slice(-25)) },
               ],
             }),
@@ -84,7 +92,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           const result = await response.json() as GroqResponse;
           const raw = result.choices?.[0]?.message?.content?.trim();
           if (!raw) { lastError = "Groq returned an empty question set."; continue; }
-          const parsed = z.object({ questions: z.array(Question).length(5) }).safeParse(JSON.parse(raw.replace(/^```(?:json)?\\s*/i, "").replace(/\\s*```$/, "")));
+          const parsed = z.object({ questions: z.array(Question).length(5) }).safeParse(parseQuestions(raw));
           if (!parsed.success) { lastError = "AI returned an incomplete question set."; continue; }
           const fresh = parsed.data.questions.filter(item => !seen.has(normalized(item.question)));
           if (fresh.length !== 5 || new Set(fresh.map(item => normalized(item.question))).size !== 5) { lastError = "AI repeated questions; retrying."; continue; }
