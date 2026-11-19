@@ -48,7 +48,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
     const discovered = await availableModels(key);
-    const preferred = ["gemini-3.5-flash-lite"];
+    const preferred = ["gemini-3.8-flash"];
     const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : preferred;
     if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
     const questions: QuizQuestion[] = [];
