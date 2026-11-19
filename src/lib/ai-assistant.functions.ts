@@ -45,6 +45,8 @@ async function discoverModels(key: string): Promise<string[]> {
 // Best-effort server-side cache for non-clinical educational responses only.
 // This cache is per server instance and may be cleared by a serverless restart.
 const educationalCache = new Map<string, { answer: string; model: string; expires: number }>();
+// Per-instance circuit breaker: avoid hammering a provider that just returned 503.
+let geminiBusyUntil = 0;
 export const askPhysioAI = createServerFn({ method: "POST" })
   .inputValidator((value: unknown) => Input.parse(value))
   .handler(async ({ data }) => {
@@ -52,6 +54,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const cacheKey = cacheable ? data.mode + ":" + data.question.trim().toLowerCase() : "";
     const cached = cacheable ? educationalCache.get(cacheKey) : undefined;
     if (cached && cached.expires > Date.now()) return { answer: cached.answer, model: cached.model };
+    if (Date.now() < geminiBusyUntil) throw new Error("Gemini is temporarily overloaded. Please wait about a minute before trying again. Your input is preserved.");
     enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
@@ -103,11 +106,12 @@ export const askPhysioAI = createServerFn({ method: "POST" })
             reason: providerMessage.slice(0, 450).replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED]"),
           });
           if ([429, 500, 502, 503, 504].includes(response.status)) {
+            if (response.status === 503) geminiBusyUntil = Date.now() + 60_000;
             overloaded = true;
             lastError = response.status === 429
               ? "Gemini API quota has been reached (HTTP 429). Wait before requesting again."
               : "Gemini is experiencing high demand (HTTP " + response.status + "). Try again shortly.";
-            if (response.status === 429) break;
+            if (response.status === 429 || response.status === 503) break;
             continue;
           }
           if ([400, 404].includes(response.status)) {
