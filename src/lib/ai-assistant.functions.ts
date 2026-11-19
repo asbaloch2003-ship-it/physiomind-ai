@@ -42,9 +42,16 @@ async function discoverModels(key: string): Promise<string[]> {
   finally { clearTimeout(timer); }
 }
 
+// Best-effort server-side cache for non-clinical educational responses only.
+// This cache is per server instance and may be cleared by a serverless restart.
+const educationalCache = new Map<string, { answer: string; model: string; expires: number }>();
 export const askPhysioAI = createServerFn({ method: "POST" })
   .inputValidator((value: unknown) => Input.parse(value))
   .handler(async ({ data }) => {
+    const cacheable = data.mode === "study" || data.mode === "notes";
+    const cacheKey = cacheable ? data.mode + ":" + data.question.trim().toLowerCase() : "";
+    const cached = cacheable ? educationalCache.get(cacheKey) : undefined;
+    if (cached && cached.expires > Date.now()) return { answer: cached.answer, model: cached.model };
     enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
@@ -112,7 +119,16 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         }
         const result = await response.json() as GeminiResponse;
         const answer = result.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
-        if (answer) return { answer, model };
+        if (answer) {
+          if (cacheable) {
+            if (educationalCache.size >= 100) {
+              const oldest = educationalCache.keys().next().value;
+              if (oldest) educationalCache.delete(oldest);
+            }
+            educationalCache.set(cacheKey, { answer, model, expires: Date.now() + 86_400_000 });
+          }
+          return { answer, model };
+        }
         lastError = `Gemini model ${model} returned no usable answer.`;
       } catch (error) {
         if (controller.signal.aborted) {
