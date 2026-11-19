@@ -11,7 +11,36 @@ const Question = z.object({
 });
 type QuizQuestion = z.infer<typeof Question>;
 type GroqResponse = { choices?: Array<{ message?: { content?: string } }> };
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+const preferredGroqModels = ["llama-3.3-70b-versatile", "openai/gpt-oss-20b", "llama-3.1-8b-instant"];
+let groqModelCache: { models: string[]; expires: number } | undefined;
+async function selectGroqModel(key: string): Promise<string> {
+  const configured = process.env.GROQ_MODEL?.trim();
+  if (configured && !/^[a-zA-Z0-9._/-]+$/.test(configured)) throw new Error("Invalid GROQ_MODEL setting.");
+  if (!groqModelCache || groqModelCache.expires < Date.now()) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: "Bearer " + key }, signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Unable to list Groq models (HTTP " + response.status + ").");
+      const listing = await response.json() as { data?: Array<{ id?: string; active?: boolean }> };
+      const models = (listing.data || []).filter(m => m.active !== false && typeof m.id === "string").map(m => m.id!);
+      if (!models.length) throw new Error("No active Groq models are available to this API key.");
+      groqModelCache = { models, expires: Date.now() + 600000 };
+    } finally { clearTimeout(timer); }
+  }
+  const models = groqModelCache.models;
+  if (configured) {
+    if (!models.includes(configured)) throw new Error("Configured GROQ_MODEL is not available to your Groq API key.");
+    return configured;
+  }
+  const preferred = preferredGroqModels.find(m => models.includes(m));
+  if (preferred) return preferred;
+  const alternative = models.find(m => /llama|gpt-oss|qwen/i.test(m) && !/guard|safety|whisper|audio|tts|vision|image|transcri|compound/i.test(m));
+  if (!alternative) throw new Error("No suitable Groq text-generation model is available. Check the Groq Models page.");
+  return alternative;
+}
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 export const generateTopicBcqs = createServerFn({ method: "POST" })
@@ -20,6 +49,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     enforceAiRateLimit("bcqs", 12);
     const key = process.env.GROQ_API_KEY;
     if (!key) throw new Error("Groq is not configured. Add GROQ_API_KEY in Vercel Production settings.");
+    const model = await selectGroqModel(key);
     const questions: QuizQuestion[] = [];
     const seen = new Set((data.previousQuestions || []).map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
@@ -35,7 +65,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
             method: "POST", signal: controller.signal,
             headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
             body: JSON.stringify({
-              model: GROQ_MODEL, temperature: 0.65, max_completion_tokens: 2200,
+              model, temperature: 0.65, max_completion_tokens: 2200,
               response_format: { type: "json_object" },
               messages: [
                 { role: "system", content: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with a questions array. Each item has question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). All questions must be distinct, clinically safe, and appropriate to the topic. Avoid invented references." },
