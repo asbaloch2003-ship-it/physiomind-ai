@@ -29,23 +29,32 @@ function Page() {
   const waitSeconds=Math.max(0,Math.ceil((cooldownUntil-clock)/1000));
   const [error,setError] = useState("");
   const [questions,setQuestions] = useState<Question[]>([]);
+  const [partial,setPartial] = useState<{topic:string;questions:Question[];attemptId:string}|null>(null);
   const [answers,setAnswers] = useState<Record<number,number>>({});
   const [attempt,setAttempt] = useState(0);
   const [history,setHistory] = useState<Record<string,string[]>>({});
   const [activeTopic,setActiveTopic] = useState("");
   const topics = subject==="all"?[]:getCurriculumTopics(subject);
   const selectedCourse = subject==="all"?undefined:getCourse(subject);
-  useEffect(()=>{setTopic("");setQuestions([]);setAnswers({});setError("");},[subject,semester]);
+  useEffect(()=>{setTopic("");setQuestions([]);setPartial(null);setAnswers({});setError("");},[subject,semester]);
   async function generateQuiz() {
     const current=topic.trim();
     if(current.length<3||generating||Date.now()<cooldownUntil)return;
     setGenerating(true);setError("");
     const key=subject+"::"+current.toLowerCase();
     const previous=history[key]||[];
+    const resume=partial?.topic===key?partial:null;
+    const attemptId=resume?.attemptId||(globalThis.crypto?.randomUUID?.()||String(Date.now()));
     try {
-      const result=await generate({data:{topic:(selectedCourse?selectedCourse.name+" — ":"")+current,count:25,previousQuestions:previous.slice(-40),attemptId:globalThis.crypto?.randomUUID?.()||String(Date.now())}});
+      const result=await generate({data:{topic:(selectedCourse?selectedCourse.name+" — ":"")+current,count:25,previousQuestions:previous.slice(-40),attemptId,partialQuestions:resume?.questions||[]}});
       const incoming=result.questions;
-      if(incoming.length!==25)throw new Error("The quiz was incomplete. Please generate again.");
+      if(incoming.length!==25){
+        setPartial({topic:key,questions:incoming,attemptId});
+        setError("Saved "+incoming.length+" of 25 questions. "+(result.warning||"The AI was interrupted.")+" Your progress is preserved. Wait a moment, then click Continue generation.");
+        setCooldownUntil(Date.now()+30000);setClock(Date.now());
+        return;
+      }
+      setPartial(null);
       setQuestions(incoming);setAnswers({});setActiveTopic(current);setAttempt(n=>n+1);
       setHistory(h=>({...h,[key]:[...(h[key]||[]),...incoming.map(q=>q.question)].slice(-40)}));
       setCooldownUntil(Date.now()+45000);setClock(Date.now());
@@ -73,7 +82,7 @@ function Page() {
             <input value={topic} onChange={e=>setTopic(e.target.value)} maxLength={140} placeholder="e.g. Rotator cuff muscles, gait cycle" className="mt-2 h-11 w-full rounded-lg border bg-background px-3 font-normal"/>
           </label>
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||waitSeconds>0||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating 25 BCQs…":waitSeconds>0?"Try again in "+waitSeconds+"s":questions.length?"Generate new 25 BCQs":"Generate 25 BCQs"}</Button><span className="text-sm text-muted-foreground">25 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"} · A short pause between attempts helps avoid AI overload</span></div>
+        <div className="mt-5 flex flex-wrap items-center gap-3"><Button disabled={generating||waitSeconds>0||topic.trim().length<3} onClick={generateQuiz}>{generating?"Generating BCQs…":waitSeconds>0?"Continue in "+waitSeconds+"s":partial?"Continue generation ("+partial.questions.length+"/25 saved)":questions.length?"Generate new 25 BCQs":"Generate 25 BCQs"}</Button><span className="text-sm text-muted-foreground">25 questions per attempt · {attempt?attempt+" attempt(s) this session":"Fresh questions each time"} · A short pause between attempts helps avoid AI overload</span></div>
         {error&&<p role="alert" className="mt-4 rounded-lg border border-destructive p-3 text-sm text-destructive">{error}</p>}
       </section>
       {questions.length>0&&<section className="no-print mt-7"><div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b pb-4"><div><h2 className="text-xl font-bold">{activeTopic}</h2><p className="text-sm text-muted-foreground">Attempt {attempt} · 25 BCQs</p></div><strong aria-live="polite">Score: {correct} / {answered} answered</strong></div>
