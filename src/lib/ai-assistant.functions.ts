@@ -62,17 +62,15 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = ["gemini-3.5-flash-lite", preferred, "gemini-3.5-flash"].filter(m => isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m));
-    const models = available.length
-      ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m))])]
-      : [...new Set(preferredModels)];
+    const preferredModels = ["gemini-3.5-flash-lite"];
+    const models = available.length ? preferredModels.filter(m => available.includes(m)) : preferredModels;
     if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     // Long notes should not start a second full generation inside the same serverless invocation.
-    const attempts = models.slice(0, data.mode === "notes" ? 1 : 2);
+    const attempts = models.slice(0, 1);
     let overloaded = false;
     let sawUnsupportedModel = false;
     for (let attempt = 0; attempt < attempts.length; attempt++) {
