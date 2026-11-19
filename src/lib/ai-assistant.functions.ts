@@ -16,7 +16,7 @@ const guidance = {
 };
 
 type GroqResponse = { choices?: Array<{ message?: { content?: string } }> };
-const GROQ_MODEL = "llama-3.1-8b-instant";
+const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
 
 // Best-effort server-side cache for non-clinical educational responses only.
 // This cache is per server instance and may be cleared by a serverless restart.
@@ -52,7 +52,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         console.error("PhysioSmart Groq request failed", { mode: data.mode, httpStatus: response.status, reason: (payload?.error?.message || "").slice(0, 300) });
         if (response.status === 429) throw new Error("Groq free-tier rate limit reached (HTTP 429). Please wait before retrying.");
         if ([401, 403].includes(response.status)) throw new Error("Groq API key rejected. Check GROQ_API_KEY in Vercel.");
-        throw new Error("Groq request failed (HTTP " + response.status + "). Please retry shortly.");
+        throw new Error("Groq request failed (HTTP " + response.status + "): " + (payload?.error?.message || "Unknown provider error").slice(0, 240));
       }
       const result = await response.json() as GroqResponse;
       const answer = result.choices?.[0]?.message?.content?.trim();
