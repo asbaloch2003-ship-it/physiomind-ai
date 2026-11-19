@@ -16,7 +16,36 @@ const guidance = {
 };
 
 type GroqResponse = { choices?: Array<{ message?: { content?: string } }> };
-const GROQ_MODEL = process.env.GROQ_MODEL || "llama-3.1-8b-instant";
+const preferredGroqModels = ["llama-3.3-70b-versatile", "openai/gpt-oss-20b", "llama-3.1-8b-instant"];
+let groqModelCache: { models: string[]; expires: number } | undefined;
+async function selectGroqModel(key: string): Promise<string> {
+  const configured = process.env.GROQ_MODEL?.trim();
+  if (configured && !/^[a-zA-Z0-9._/-]+$/.test(configured)) throw new Error("Invalid GROQ_MODEL setting.");
+  if (!groqModelCache || groqModelCache.expires < Date.now()) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/models", {
+        headers: { Authorization: "Bearer " + key }, signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("Unable to list Groq models (HTTP " + response.status + ").");
+      const listing = await response.json() as { data?: Array<{ id?: string; active?: boolean }> };
+      const models = (listing.data || []).filter(m => m.active !== false && typeof m.id === "string").map(m => m.id!);
+      if (!models.length) throw new Error("No active Groq models are available to this API key.");
+      groqModelCache = { models, expires: Date.now() + 600000 };
+    } finally { clearTimeout(timer); }
+  }
+  const models = groqModelCache.models;
+  if (configured) {
+    if (!models.includes(configured)) throw new Error("Configured GROQ_MODEL is not available to your Groq API key.");
+    return configured;
+  }
+  const preferred = preferredGroqModels.find(m => models.includes(m));
+  if (preferred) return preferred;
+  const alternative = models.find(m => /llama|gpt-oss|qwen/i.test(m) && !/guard|safety|whisper|audio|tts|vision|image|transcri|compound/i.test(m));
+  if (!alternative) throw new Error("No suitable Groq text-generation model is available. Check the Groq Models page.");
+  return alternative;
+}
 
 // Best-effort server-side cache for non-clinical educational responses only.
 // This cache is per server instance and may be cleared by a serverless restart.
@@ -32,6 +61,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const key = process.env.GROQ_API_KEY;
     if (!key) throw new Error("Groq is not configured. Add GROQ_API_KEY in Vercel Production settings.");
 
+    const model = await selectGroqModel(key);
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     const controller = new AbortController();
@@ -41,7 +71,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         method: "POST", signal: controller.signal,
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + key },
         body: JSON.stringify({
-          model: GROQ_MODEL,
+          model,
           messages: [{ role: "system", content: prompt }, { role: "user", content: data.question }],
           max_completion_tokens: data.mode === "notes" ? 2300 : data.mode === "study" ? 1900 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 2400 : 850) : 1200,
           temperature: 0.4,
@@ -62,9 +92,9 @@ export const askPhysioAI = createServerFn({ method: "POST" })
           const oldest = educationalCache.keys().next().value;
           if (oldest) educationalCache.delete(oldest);
         }
-        educationalCache.set(cacheKey, { answer, model: GROQ_MODEL, expires: Date.now() + 86_400_000 });
+        educationalCache.set(cacheKey, { answer, model, expires: Date.now() + 86_400_000 });
       }
-      return { answer, model: GROQ_MODEL };
+      return { answer, model };
     } catch (error) {
       if (controller.signal.aborted) throw new Error("Groq did not respond within the time limit. Your input is preserved.");
       throw error;
