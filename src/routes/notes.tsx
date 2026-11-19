@@ -111,18 +111,31 @@ function Page(){
   const [answer,setAnswer]=useState("");
   const [error,setError]=useState("");
   const [busy,setBusy]=useState(false);
+  const [savedNotice,setSavedNotice]=useState("");
+  function savedKey(courseId:string, topicName:string) { return "physiosmart:notes:v1:"+courseId+":"+topicName.trim().toLowerCase(); }
+  function loadSaved(courseId:string, topicName:string) {
+    try { return localStorage.getItem(savedKey(courseId,topicName)); } catch { return null; }
+  }
   const ask=useServerFn(askPhysioAI);
   const course=getCourse(subject);
   async function generate(t:string){
     if(!course||t.trim().length<3||busy)return;
-    setBusy(true);setError("");setAnswer("");setTopic(t);
+    setSavedNotice("");setError("");setTopic(t);
+    const saved=loadSaved(course.id,t);
+    if(saved){setAnswer(saved);setSavedNotice("Previously saved notes from this device. No new AI request needed.");return;}
+    setBusy(true);setAnswer("");
     try{
       const nonClinical = /^(english-|pakistan-studies|computer$|islamic-studies$|sociology$|biostatistics-|research-methodology$|research-project$|professional-practice$)/.test(course.id);
       const application = nonClinical ? "Explain subject-specific applications and worked examples; do not include clinical relevance, patient cases or physiotherapy applications unless directly requested or genuinely part of the topic." : "Include clinical relevance and physiotherapy applications only when they naturally apply to the topic.";
       const question="Create detailed, simple, comprehensive DPT study notes for semester "+course.semester+", subject "+course.name+", topic "+t+". Explain all important subtopics, concepts, classifications, processes, examples and exam points in depth, not just a definition. "+application+" For anatomical muscle topics, cover anatomical location, origin, insertion, nerve supply and actions for individual major muscles, grouping by region. For non-muscle topics, adapt headings and details to that subject. Include relevant revision points and exam-oriented self-check questions only when useful. Do not include viva or oral-exam questions unless the user explicitly asks for them. IMPORTANT OUTPUT FORMAT: Use SECTION: Heading on a separate line for each major section, SUBSECTION: Name for subtopics, ITEM: Detail for bullet items, and ordinary paragraphs for explanations. Each SECTION, SUBSECTION and ITEM must start on a NEW LINE. Do not use Markdown symbols (asterisks, hashes or backticks). Write professional textbook-style sections, not a wall of text. Do not invent sources.";
       const result=await ask({data:{mode:"notes",question}});
       setAnswer(result.answer);
-    }catch(e){setError(e instanceof Error?e.message:"Could not generate notes.");}
+      try { localStorage.setItem(savedKey(course.id,t),result.answer); } catch {}
+    }catch(e){
+      const backup=loadSaved(course.id,t);
+      if(backup){setAnswer(backup);setSavedNotice("AI is temporarily unavailable. Showing your saved notes.");}
+      else setError(e instanceof Error?e.message:"Could not generate notes.");
+    }
     finally{setBusy(false);}
   }
   return <>
@@ -137,6 +150,7 @@ function Page(){
           <div className="mt-5 flex flex-wrap gap-2"><input aria-label="Topic name" className="h-11 min-w-48 flex-1 rounded-lg border bg-background px-3 text-sm" placeholder="Or type another topic…" value={custom} onChange={e=>setCustom(e.target.value)} maxLength={150}/><Button disabled={busy||custom.trim().length<3} onClick={()=>generate(custom)}>{busy?"Generating…":"Generate AI notes"}</Button></div>
         </Card>
         {busy&&<p role="status">Preparing your notes…</p>}
+        {savedNotice&&<p role="status" className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">{savedNotice}</p>}
         {error&&<p role="alert" className="rounded-lg border border-destructive p-4 text-destructive">{error}</p>}
         {answer&&<div className="notes-print-content"><Card><header className="mb-7 rounded-xl border border-slate-200 bg-slate-50 px-5 py-6"><p className="mb-2 text-xs font-bold uppercase tracking-widest text-blue-700">PhysioSmart AI · Study Notes</p><h2 className="text-2xl font-bold tracking-tight text-slate-950">{topic}</h2><p className="mt-2 text-sm text-slate-600">{course.name} · Semester {course.semester}</p></header><NotesText value={answer}/><div className="notes-print-actions mt-5 flex gap-2 border-t pt-4"><Button variant="outline" onClick={()=>navigator.clipboard?.writeText(answer)}>Copy Text</Button><Button variant="outline" onClick={()=>window.print()}>Save as PDF</Button></div><p className="mt-3 text-xs text-muted-foreground">AI-generated study notes; verify important facts with textbooks and instructors.</p></Card></div>}
       </div>}
