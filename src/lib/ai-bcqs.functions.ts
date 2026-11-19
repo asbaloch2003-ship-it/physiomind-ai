@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { enforceAiRateLimit } from "./ai-rate-limit";
 
-const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(25), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional() });
+const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(25), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional(), partialQuestions: z.array(Question).max(24).optional() });
 const Question = z.object({
   question: z.string().min(12),
   options: z.array(z.string().min(1)).length(4),
@@ -51,19 +51,19 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     const preferred = [...new Set([process.env.GEMINI_MODEL || "gemini-2.5-flash", ...["gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash"]])].filter(isTextModel);
     const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : preferred;
     if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
-    const questions: QuizQuestion[] = [];
-    const seen = new Set((data.previousQuestions || []).map(normalized));
+    const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
+    const seen = new Set([...(data.previousQuestions || []), ...questions.map(q => q.question)].map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
 
     // Generate 25 questions as five smaller batches to limit response size.
-    for (let batch = 0; batch < 5; batch++) {
+    for (let batch = Math.floor(questions.length / 5); batch < 5; batch++) {
       let completed = false;
       for (const model of models.slice(0, 2)) {
         if (completed) break;
         for (let retry = 0; retry < 2; retry++) {
-          if (retry) await pause(500);
+          if (retry) await pause(1200);
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 18000);
+          const timer = setTimeout(() => controller.abort(), 22000);
           try {
             const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
               method: "POST", signal: controller.signal,
@@ -101,7 +101,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           } finally { clearTimeout(timer); }
         }
       }
-      if (!completed) throw new Error("Generated " + questions.length + " of 25 questions. " + lastError + " No incomplete quiz was shown. Please retry later.");
+      if (!completed) return { questions, topic: data.topic, complete: false, warning: lastError };
     }
-    return { questions, topic: data.topic };
+    return { questions, topic: data.topic, complete: true, warning: "" };
   });
