@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { enforceAiRateLimit } from "./ai-rate-limit";
 
-const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(25), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional(), partialQuestions: z.array(Question).max(24).optional() });
 const Question = z.object({
   question: z.string().min(12),
   options: z.array(z.string().min(1)).length(4),
@@ -10,6 +9,7 @@ const Question = z.object({
   explanation: z.string().min(15),
 });
 type QuizQuestion = z.infer<typeof Question>;
+const Input = z.object({ topic: z.string().trim().min(3).max(150), count: z.literal(25), previousQuestions: z.array(z.string().max(500)).max(40).optional(), attemptId: z.string().max(100).optional(), partialQuestions: z.array(Question).max(24).optional() });
 type GeminiResponse = { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const normalized = (text: string) => text.toLowerCase().replace(/[^a-z0-9]/g, "");
