@@ -48,7 +48,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
     const discovered = await availableModels(key);
-    const preferred = [...new Set([process.env.GEMINI_MODEL || "gemini-2.5-flash", ...["gemini-2.5-flash", "gemini-3.5-flash-lite", "gemini-3.8-flash"]])].filter(isTextModel);
+    const preferred = ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.8-flash"];
     const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : preferred;
     if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
     const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
@@ -61,9 +61,9 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
       for (const model of models.slice(0, 2)) {
         if (completed) break;
         for (let retry = 0; retry < 2; retry++) {
-          if (retry) await pause(1200);
+          if (retry) await pause(1800);
           const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 22000);
+          const timer = setTimeout(() => controller.abort(), 25000);
           try {
             const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent", {
               method: "POST", signal: controller.signal,
@@ -71,7 +71,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
               body: JSON.stringify({
                 systemInstruction: { parts: [{ text: "Create exactly FIVE accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with questions array. Each item must have question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). Questions should be distinct, clinically safe, and appropriate to the topic. Each explanation must be concise. Avoid invented references." }] },
                 contents: [{ role: "user", parts: [{ text: "Topic: " + data.topic + ". Attempt: " + (data.attemptId || "new") + ". Batch " + (batch + 1) + ". Create 5 NEW questions not duplicating these: " + JSON.stringify([...(data.previousQuestions || []).slice(-15), ...questions.map(q => q.question)].slice(-25)) }] }],
-                generationConfig: { maxOutputTokens: 2200, temperature: 0.7, responseMimeType: "application/json" },
+                generationConfig: { maxOutputTokens: 2200, temperature: 0.3, responseMimeType: "application/json" },
               }),
             });
             if (!response.ok) {
