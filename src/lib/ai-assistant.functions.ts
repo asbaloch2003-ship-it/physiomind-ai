@@ -63,14 +63,15 @@ export const askPhysioAI = createServerFn({ method: "POST" })
 
     const available = await discoverModels(key);
     const preferredModels = [...new Set([preferred, "gemini-2.5-flash", "gemini-3.5-flash-lite"])];
-    const models = available.length ? preferredModels.filter(m => available.includes(m)) : preferredModels;
+    const models = available.length ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && !/preview|exp|experimental|tts|image|audio/i.test(m))])] : [];
     if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     // Long notes should not start a second full generation inside the same serverless invocation.
-    const attempts = models.slice(0, 2);
+    if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
+    const attempts = models.slice(0, 3);
     let overloaded = false;
     let sawUnsupportedModel = false;
     for (let attempt = 0; attempt < attempts.length; attempt++) {
