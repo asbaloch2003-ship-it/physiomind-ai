@@ -59,7 +59,7 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     if (!/^[a-zA-Z0-9._-]+$/.test(preferred)) throw new Error("Invalid AI model configuration.");
 
     const available = await discoverModels(key);
-    const preferredModels = ["gemini-3.5-flash-lite", "gemini-flash-latest", preferred].filter(m => isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m));
+    const preferredModels = ["gemini-3.5-flash-lite", preferred, "gemini-3.5-flash"].filter(m => isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m));
     const models = available.length
       ? [...new Set([...preferredModels.filter(m => available.includes(m)), ...available.filter(m => /flash/i.test(m) && isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m))])]
       : [...new Set(preferredModels)];
