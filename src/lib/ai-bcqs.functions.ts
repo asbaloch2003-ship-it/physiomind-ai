@@ -49,8 +49,8 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
     const discovered = await availableModels(key);
     const preferred = [...new Set([process.env.GEMINI_MODEL || "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash-lite"])];
-    const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : preferred;
-    if (!models.length) throw new Error("No compatible Gemini text-generation model is available to this API key. Check Google AI Studio model access.");
+    const models = discovered.length ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m) && !/preview|exp|experimental|tts|image|audio/i.test(m))])] : [];
+    if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
     const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
     const seen = new Set([...(data.previousQuestions || []), ...questions.map(q => q.question)].map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
@@ -62,7 +62,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
       if (questions.length >= batchStart + batchSizes[batch]) continue;
       const needed = batchSizes[batch];
       let completed = false;
-      for (const model of models.slice(0, 2)) {
+      for (const model of models.slice(0, 3)) {
         if (completed) break;
         for (let retry = 0; retry < 2; retry++) {
           if (retry) await pause(2500);
