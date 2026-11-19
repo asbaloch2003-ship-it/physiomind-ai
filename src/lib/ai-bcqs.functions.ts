@@ -48,7 +48,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
     // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
     const discovered = await availableModels(key);
-    const preferred = ["gemini-3.5-flash-lite", "gemini-flash-latest", configured].filter((m): m is string => !!m && isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m));
+    const preferred = ["gemini-3.5-flash-lite", configured, "gemini-3.5-flash"].filter((m): m is string => !!m && isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m));
     const models = discovered.length
       ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m) && isTextModel(m) && !/^gemini-2\.5-/.test(m) && !/preview|exp|experimental|tts/i.test(m))])]
       : [...new Set(preferred)];
