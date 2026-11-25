@@ -39,8 +39,8 @@ function FormattedAnswer({ text, clinical=false }: { text: string; clinical?: bo
   sections.push(current);
   for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
     const line=lines[lineIndex];
-    const splitTableRow=(value:string)=>value.trim().replace(/^\\|/,"").replace(/\\|$/,"").split("|").map(cell=>cell.trim());
-    if(line.includes("|") && lineIndex+1<lines.length && /^\\s*\\|?\\s*:?-{3,}:?\\s*(?:\\|\\s*:?-{3,}:?\\s*)+\\|?\\s*$/.test(lines[lineIndex+1])){
+    const splitTableRow=(value:string)=>value.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(cell=>cell.trim());
+    if(line.includes("|") && lineIndex+1<lines.length && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[lineIndex+1])){
       const headers=splitTableRow(line);
       lineIndex++;
       const rows:string[][]=[];
