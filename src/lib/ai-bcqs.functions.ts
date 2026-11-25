@@ -49,7 +49,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     const discovered = await availableModels(key);
     const preferred = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
     const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : [];
-    if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
+    if (!models.length && !process.env.GROQ_API_KEY) throw new Error("Could not verify an available Gemini text model and GROQ_API_KEY is not configured.");
     const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
     const seen = new Set([...(data.previousQuestions || []), ...questions.map(q => q.question)].map(normalized));
     let lastError = "The AI service is temporarily unavailable.";
