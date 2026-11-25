@@ -157,7 +157,9 @@ export const askPhysioAI = createServerFn({ method: "POST" })
           body: JSON.stringify({
             model: "openai/gpt-oss-20b",
             messages: [{ role: "system", content: prompt }, { role: "user", content: data.question }],
-            max_completion_tokens: data.mode === "notes" ? 2300 : data.mode === "study" ? 1900 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 800) : 1200,
+            max_completion_tokens: data.mode === "notes" ? 3000 : data.mode === "study" ? 2400 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 4500 : 2200) : 1600,
+            reasoning_effort: "low",
+            include_reasoning: false,
           }),
         });
         if (!response.ok) {
@@ -165,13 +167,13 @@ export const askPhysioAI = createServerFn({ method: "POST" })
           console.error("PhysioSmart Groq fallback failed", { mode: data.mode, httpStatus: response.status, providerCode: payload?.error?.code || "unknown", reason: (payload?.error?.message || "").slice(0, 350) });
           lastError = "Gemini and Groq are currently unavailable (Groq HTTP " + response.status + ").";
         } else {
-          const result = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+          const result = await response.json() as { choices?: Array<{ finish_reason?: string | null; message?: { content?: string | null } }> };
           const answer = result.choices?.[0]?.message?.content?.trim();
           if (answer) {
             if (cacheable) educationalCache.set(cacheKey, { answer, model: "Groq GPT-OSS 20B", expires: Date.now() + 86_400_000 });
             return { answer, model: "Groq GPT-OSS 20B" };
           }
-          lastError = "Groq returned an empty answer.";
+          lastError = "Groq returned no visible answer (finish reason: " + (result.choices?.[0]?.finish_reason || "unknown") + "). Please retry.";
         }
       } catch (error) {
         lastError = controller.signal.aborted ? "Groq timed out while generating the answer." : "Groq fallback could not complete the request.";
