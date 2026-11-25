@@ -113,6 +113,47 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
           } finally { clearTimeout(timer); }
         }
       }
+      // Secondary provider: use Groq if Gemini cannot complete this batch.
+      if (!completed && process.env.GROQ_API_KEY) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 30000);
+        try {
+          const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST", signal: controller.signal,
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.GROQ_API_KEY },
+            body: JSON.stringify({
+              model: "openai/gpt-oss-20b",
+              messages: [
+                { role: "system", content: "Create exactly " + needed + " accurate DPT single-best-answer multiple choice questions. Return ONLY a JSON object with questions array. Each item must have question (string), options (four strings), answer (integer 0-3), explanation (at least 15 characters). Questions should be distinct, clinically safe, and appropriate to the topic. Each explanation must be concise. Avoid invented references." },
+                { role: "user", content: "Topic: " + data.topic + ". Attempt: " + (data.attemptId || "new") + ". Batch " + (batch + 1) + ". Create " + needed + " NEW questions not duplicating these: " + JSON.stringify([...(data.previousQuestions || []).slice(-15), ...questions.map(q => q.question)].slice(-25)) },
+              ],
+              max_completion_tokens: 5000,
+              response_format: { type: "json_object" },
+            }),
+          });
+          if (!response.ok) {
+            const payload = await response.json().catch(() => null) as { error?: { message?: string; code?: string } } | null;
+            console.error("PhysioSmart Groq BCQ fallback failed", { batch: batch + 1, httpStatus: response.status, providerCode: payload?.error?.code || "unknown", reason: (payload?.error?.message || "").slice(0, 350) });
+            lastError = "Gemini and Groq are currently unavailable (Groq HTTP " + response.status + ").";
+          } else {
+            const result = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+            const raw = result.choices?.[0]?.message?.content?.trim();
+            if (raw) {
+              const parsed = z.object({ questions: z.array(Question).length(needed) }).safeParse(JSON.parse(raw.replace(/^\x60\x60\x60(?:json)?\\s*/i, "").replace(/\\s*\x60\x60\x60$/, "")));
+              if (parsed.success) {
+                const fresh = parsed.data.questions.filter(q => !seen.has(normalized(q.question)));
+                if (fresh.length === needed && new Set(fresh.map(q => normalized(q.question))).size === needed) {
+                  for (const q of fresh) { questions.push(q); seen.add(normalized(q.question)); }
+                  completed = true;
+                } else lastError = "Groq returned duplicate questions; please continue generation.";
+              } else lastError = "Groq returned an incomplete question set.";
+            } else lastError = "Groq returned an empty question set.";
+          }
+        } catch (error) {
+          lastError = controller.signal.aborted ? "Groq timed out while generating questions." : "Groq fallback could not complete this batch.";
+          console.error("PhysioSmart Groq BCQ fallback error", { batch: batch + 1, reason: error instanceof Error ? error.message.slice(0, 250) : "unknown" });
+        } finally { clearTimeout(timer); }
+      }
       if (!completed) return { questions, topic: data.topic, complete: false, warning: lastError };
     }
     return { questions, topic: data.topic, complete: true, warning: "" };
