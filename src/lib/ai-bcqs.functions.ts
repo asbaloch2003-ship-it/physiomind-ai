@@ -44,12 +44,11 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     enforceAiRateLimit("bcqs", 12);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
-    const configured = process.env.GEMINI_MODEL;
-    if (configured && !/^[a-zA-Z0-9._-]+$/.test(configured)) throw new Error("Invalid AI model configuration.");
-    // Use documented stable model IDs as fallback if the configured model is busy or unsupported.
+    // Keep BCQ generation on the two models from the earlier working setup.
+    // Do not fall back to Gemini 2.5: access is restricted for some newer projects.
     const discovered = await availableModels(key);
-    const preferred = [...new Set([process.env.GEMINI_MODEL || "gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3.5-flash-lite"])];
-    const models = discovered.length ? [...new Set([...preferred.filter(m => discovered.includes(m)), ...discovered.filter(m => /flash/i.test(m) && !/preview|exp|experimental|tts|image|audio/i.test(m))])] : [];
+    const preferred = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : [];
     if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
     const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
     const seen = new Set([...(data.previousQuestions || []), ...questions.map(q => q.question)].map(normalized));
@@ -79,13 +78,22 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
               }),
             });
             if (!response.ok) {
+              const errorPayload = await response.json().catch(() => null) as { error?: { message?: string; status?: string } } | null;
+              const providerMessage = errorPayload?.error?.message || "";
+              console.error("PhysioSmart Gemini BCQ request failed", {
+                model, httpStatus: response.status,
+                providerStatus: errorPayload?.error?.status || "unknown",
+                reason: providerMessage.slice(0, 450).replace(/AIza[A-Za-z0-9_-]+/g, "[REDACTED]"),
+              });
               if ([401, 403].includes(response.status)) throw new Error("Gemini API access denied. Check the server API key and permissions.");
               if (response.status === 429) {
                 lastError = "Gemini request quota reached (HTTP 429). Please wait and try again.";
-                // Switching models does not reliably bypass project-level quota.
                 break;
               }
-              if ([400, 404].includes(response.status)) { lastError = "Model " + model + " is not available to this API key (HTTP " + response.status + ")."; break; }
+              if ([400, 404].includes(response.status)) {
+                lastError = "Gemini model " + model + " rejected the request (HTTP " + response.status + "; " + (errorPayload?.error?.status || "unknown") + ").";
+                break;
+              }
               if ([500, 502, 503, 504].includes(response.status)) { lastError = "Gemini is temporarily overloaded (HTTP " + response.status + ")."; if (retry === 0) await pause(1800); continue; }
               throw new Error("AI request failed (HTTP " + response.status + ").");
             }
