@@ -139,7 +139,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
             const result = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
             const raw = result.choices?.[0]?.message?.content?.trim();
             if (raw) {
-              const parsed = z.object({ questions: z.array(Question).length(needed) }).safeParse(JSON.parse(raw.replace(/^\x60\x60\x60(?:json)?\\s*/i, "").replace(/\\s*\x60\x60\x60$/, "")));
+              const parsed = z.object({ questions: z.array(Question).length(needed) }).safeParse(JSON.parse(raw));
               if (parsed.success) {
                 const fresh = parsed.data.questions.filter(q => !seen.has(normalized(q.question)));
                 if (fresh.length === needed && new Set(fresh.map(q => normalized(q.question))).size === needed) {
