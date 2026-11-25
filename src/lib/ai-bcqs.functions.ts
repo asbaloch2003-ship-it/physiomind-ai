@@ -61,6 +61,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
       if (questions.length >= batchStart + batchSizes[batch]) continue;
       const needed = batchSizes[batch];
       let completed = false;
+      let stopGeminiAttempts = false;
       for (const model of models.slice(0, 3)) {
         if (completed) break;
         for (let retry = 0; retry < 2; retry++) {
@@ -87,14 +88,15 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
               });
               if ([401, 403].includes(response.status)) throw new Error("Gemini API access denied. Check the server API key and permissions.");
               if (response.status === 429) {
-                lastError = "Gemini request quota reached (HTTP 429). Please wait and try again.";
+                lastError = "Gemini request quota reached (HTTP 429). Switching to the backup AI provider.";
+                stopGeminiAttempts = true;
                 break;
               }
               if ([400, 404].includes(response.status)) {
                 lastError = "Gemini model " + model + " rejected the request (HTTP " + response.status + "; " + (errorPayload?.error?.status || "unknown") + ").";
                 break;
               }
-              if ([500, 502, 503, 504].includes(response.status)) { lastError = "Gemini is temporarily overloaded (HTTP " + response.status + ")."; if (retry === 0) await pause(1800); continue; }
+              if ([500, 502, 503, 504].includes(response.status)) { lastError = "Gemini is temporarily overloaded (HTTP " + response.status + "). Switching to the backup AI provider."; stopGeminiAttempts = true; break; }
               throw new Error("AI request failed (HTTP " + response.status + ").");
             }
             const result = await response.json() as GeminiResponse;
@@ -112,6 +114,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
             lastError = controller.signal.aborted ? "Gemini timed out while generating questions." : error instanceof SyntaxError ? "AI returned invalid JSON." : error instanceof Error ? error.message : "AI request failed.";
           } finally { clearTimeout(timer); }
         }
+        if (stopGeminiAttempts) break;
       }
       // Secondary provider: use Groq if Gemini cannot complete this batch.
       if (!completed && process.env.GROQ_API_KEY) {
