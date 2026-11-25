@@ -40,7 +40,8 @@ function FormattedAnswer({ text, clinical=false }: { text: string; clinical?: bo
   for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
     const line=lines[lineIndex];
     const splitTableRow=(value:string)=>value.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(cell=>cell.trim());
-    if(line.includes("|") && lineIndex+1<lines.length && /^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(lines[lineIndex+1])){
+    const isTableSeparator=(value:string)=>{const cells=splitTableRow(value);return cells.length>=2 && cells.every(cell=>/^:?-{3,}:?$/.test(cell));};
+    if(line.includes("|") && lineIndex+1<lines.length && isTableSeparator(lines[lineIndex+1])){
       const headers=splitTableRow(line);
       lineIndex++;
       const rows:string[][]=[];
