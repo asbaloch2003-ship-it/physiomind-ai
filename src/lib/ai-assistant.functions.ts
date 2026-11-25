@@ -54,7 +54,8 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     const cacheKey = cacheable ? data.mode + ":" + data.question.trim().toLowerCase() : "";
     const cached = cacheable ? educationalCache.get(cacheKey) : undefined;
     if (cached && cached.expires > Date.now()) return { answer: cached.answer, model: cached.model };
-    if (Date.now() < geminiBusyUntil) throw new Error("Gemini is temporarily overloaded. Please wait about a minute before trying again. Your input is preserved.");
+    const geminiCircuitOpen = Date.now() < geminiBusyUntil;
+    if (geminiCircuitOpen && !process.env.GROQ_API_KEY) throw new Error("Gemini is temporarily overloaded. Please try again shortly. Your input is preserved.");
     enforceAiRateLimit("assistant", 24);
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("AI is not configured. Set GEMINI_API_KEY in Vercel.");
@@ -62,14 +63,14 @@ export const askPhysioAI = createServerFn({ method: "POST" })
     // Use the two models from the earlier working configuration. Gemini 2.5
     // access is restricted for some newer projects even when listed by the API.
     const preferredModels = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
-    const models = available.length ? preferredModels.filter(m => available.includes(m)) : [];
-    if (!models.length) throw new Error("No compatible Gemini text model is available for this API key.");
+    const models = geminiCircuitOpen ? [] : (available.length ? preferredModels.filter(m => available.includes(m)) : []);
+    if (!models.length && !process.env.GROQ_API_KEY) throw new Error("No compatible Gemini text model is available and GROQ_API_KEY is not configured.");
     const lengthGuide = data.mode === "clinical" ? (data.reportLength === "detailed" ? "Use all seven specified headings. Write a focused teaching report of approximately 450-700 words, with concise clinical reasoning and no repetition. Clearly distinguish observed findings from suggested assessments. " : "Write a rapid physiotherapy clinical snapshot, approximately 170-250 words, with exactly the seven specified headings and one or two short bullets under each. Include all essential safety warnings even if this exceeds the target. No references, extra questions, introductions or concluding paragraphs. Clearly distinguish known findings from tests to perform. ") : "";
     const prompt = lengthGuide + "You are PhysioSmart AI, an educational DPT tutor. No personal patient details, diagnosis or fabricated references. Be accurate. " + ((data.mode === "notes" || data.mode === "study" || data.mode === "clinical") ? "" : "Be concise (100-200 words). ") + guidance[data.mode];
     let lastError = "Gemini is temporarily busy. Please try again shortly.";
 
     // Long notes should not start a second full generation inside the same serverless invocation.
-    if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
+    if (!models.length && !process.env.GROQ_API_KEY) throw new Error("Could not verify an available Gemini text model and GROQ_API_KEY is not configured.");
     const attempts = models.slice(0, 3);
     let overloaded = false;
     let sawUnsupportedModel = false;
@@ -145,6 +146,39 @@ export const askPhysioAI = createServerFn({ method: "POST" })
         clearTimeout(timer);
       }
     }
+    // Secondary provider: use Groq when Gemini is overloaded or unavailable.
+    if ((overloaded || geminiCircuitOpen || !models.length) && process.env.GROQ_API_KEY) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 25000);
+      try {
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST", signal: controller.signal,
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + process.env.GROQ_API_KEY },
+          body: JSON.stringify({
+            model: "openai/gpt-oss-20b",
+            messages: [{ role: "system", content: prompt }, { role: "user", content: data.question }],
+            max_completion_tokens: data.mode === "notes" ? 2300 : data.mode === "study" ? 1900 : data.mode === "clinical" ? (data.reportLength === "detailed" ? 3200 : 800) : 1200,
+          }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null) as { error?: { message?: string; code?: string } } | null;
+          console.error("PhysioSmart Groq fallback failed", { mode: data.mode, httpStatus: response.status, providerCode: payload?.error?.code || "unknown", reason: (payload?.error?.message || "").slice(0, 350) });
+          lastError = "Gemini and Groq are currently unavailable (Groq HTTP " + response.status + ").";
+        } else {
+          const result = await response.json() as { choices?: Array<{ message?: { content?: string | null } }> };
+          const answer = result.choices?.[0]?.message?.content?.trim();
+          if (answer) {
+            if (cacheable) educationalCache.set(cacheKey, { answer, model: "Groq GPT-OSS 20B", expires: Date.now() + 86_400_000 });
+            return { answer, model: "Groq GPT-OSS 20B" };
+          }
+          lastError = "Groq returned an empty answer.";
+        }
+      } catch (error) {
+        lastError = controller.signal.aborted ? "Groq timed out while generating the answer." : "Groq fallback could not complete the request.";
+        console.error("PhysioSmart Groq fallback error", { mode: data.mode, reason: error instanceof Error ? error.message.slice(0, 250) : "unknown" });
+      } finally { clearTimeout(timer); }
+    }
+
     const summary = overloaded && sawUnsupportedModel
       ? "Gemini is overloaded and some fallback models are unavailable. Please retry later."
       : lastError;
