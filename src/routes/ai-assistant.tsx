@@ -34,10 +34,20 @@ function FormattedAnswer({ text, clinical=false }: { text: string; clinical?: bo
     .replace(/[ \t]+(#{1,4})[ \t]+/g,"\n$1 ")
     .replace(/\n{3,}/g,"\n\n");
   const lines=normalized.split("\n").map(line=>line.trim()).filter(Boolean);
-  const sections: {title:string;items:{kind:"bullet"|"number"|"subheading"|"paragraph";value:string;num?:string}[]}[]=[];
-  let current={title:"",items:[] as {kind:"bullet"|"number"|"subheading"|"paragraph";value:string;num?:string}[]};
+  const sections: {title:string;items:({kind:"bullet"|"number"|"subheading"|"paragraph";value:string;num?:string}|{kind:"table";headers:string[];rows:string[][]})[]}[]=[];
+  let current={title:"",items:[] as ({kind:"bullet"|"number"|"subheading"|"paragraph";value:string;num?:string}|{kind:"table";headers:string[];rows:string[][]})[]};
   sections.push(current);
-  for(const line of lines){
+  for(let lineIndex=0;lineIndex<lines.length;lineIndex++){
+    const line=lines[lineIndex];
+    const splitTableRow=(value:string)=>value.trim().replace(/^\\|/,"").replace(/\\|$/,"").split("|").map(cell=>cell.trim());
+    if(line.includes("|") && lineIndex+1<lines.length && /^\\s*\\|?\\s*:?-{3,}:?\\s*(?:\\|\\s*:?-{3,}:?\\s*)+\\|?\\s*$/.test(lines[lineIndex+1])){
+      const headers=splitTableRow(line);
+      lineIndex++;
+      const rows:string[][]=[];
+      while(lineIndex+1<lines.length && lines[lineIndex+1].includes("|")){lineIndex++;const cells=splitTableRow(lines[lineIndex]);if(cells.some(Boolean))rows.push(cells);}
+      current.items.push({kind:"table",headers,rows});
+      continue;
+    }
     if(/^(?:\*{1,2})?[•*-](?:\*{1,2})?$/.test(line))continue;
     const heading=line.match(/^#{1,6}\s+(.+)$/);
     if(heading){current={title:heading[1].replace(/\*\*/g,""),items:[]};sections.push(current);continue;}
@@ -52,6 +62,7 @@ function FormattedAnswer({ text, clinical=false }: { text: string; clinical?: bo
     <section key={i} className={clinical?"rounded-xl border border-border/80 bg-card p-5 shadow-sm sm:p-6":"space-y-4"}>
       {section.title&&<div className="mb-5 flex items-start gap-3 border-b border-border/70 pb-4"><span className="mt-1 h-6 w-1 shrink-0 rounded-full bg-primary"/><h3 className="text-lg font-bold tracking-tight text-foreground">{section.title}</h3></div>}
       <div className="space-y-3 text-[15px] leading-7 text-foreground/90">{section.items.map((item,j)=>{
+        if(item.kind==="table")return <div key={j} className="my-4 overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[520px] border-collapse text-left text-sm"><thead className="bg-primary/10"><tr>{item.headers.map((cell,k)=><th key={k} className="border-b px-4 py-3 font-semibold text-foreground">{cell}</th>)}</tr></thead><tbody>{item.rows.map((row,k)=><tr key={k} className={k%2===0?"bg-card":"bg-secondary/40"}>{item.headers.map((_,c)=><td key={c} className="border-b border-border/70 px-4 py-3 align-top text-foreground/90">{row[c]||""}</td>)}</tr>)}</tbody></table></div>;
         if(item.kind==="subheading")return <h4 key={j} className="pt-2 font-bold text-foreground">{item.value}</h4>;
         if(item.kind==="bullet"||item.kind==="number")return <div key={j} className="flex items-start gap-3"><span className="mt-1 flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-bold text-primary">{item.kind==="bullet"?"•":item.num}</span><p className="min-w-0 flex-1"><InlineAnswer text={item.value}/></p></div>;
         return <p key={j} className="break-words"><InlineAnswer text={item.value}/></p>;
