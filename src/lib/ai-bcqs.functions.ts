@@ -47,7 +47,7 @@ export const generateTopicBcqs = createServerFn({ method: "POST" })
     // Keep BCQ generation on the two models from the earlier working setup.
     // Do not fall back to Gemini 2.5: access is restricted for some newer projects.
     const discovered = await availableModels(key);
-    const preferred = ["gemini-3.8-flash", "gemini-3.5-flash-lite"];
+    const preferred = ["gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"];
     const models = discovered.length ? preferred.filter(m => discovered.includes(m)) : [];
     if (!models.length) throw new Error("Could not verify an available Gemini text model. Check GEMINI_API_KEY and Vercel logs; no unverified model was requested.");
     const questions: QuizQuestion[] = [...(data.partialQuestions || [])];
